@@ -1215,6 +1215,7 @@ function seedDB() {
   rooms.forEach(room=>{for(let b=1;b<=room.capacity;b++){const bn=room.roomNumber+'-B'+b,res=residents.find(r=>r.bedNumber===bn);beds.push({id:bn,bedNumber:bn,roomNumber:room.roomNumber,hostelId:room.hostelId,hostelName:room.hostelName,floor:room.floor,status:res?'Occupied':'Vacant',residentName:res?res.name:''});}});
 
   const CT=['Maintenance','Electrical','Plumbing','Cleanliness','Food','Security','Wi-Fi','Other'];
+  const LR=['Home Visit','Medical','Family Function','Tournament','Personal Work','Emergency'];
   const complaints = residents.slice(0,45).filter(()=>Math.random()>.4).map((r,i)=>({id:'CMP-'+String(i+1).padStart(4,'0'),residentId:r.id,residentName:r.name,hostelName:r.hostelName,roomNumber:r.roomNumber,type:rnd(CT),description:'Issue has been reported and requires attention.',priority:rnd(['High','Medium','Low']),status:rnd(['Open','In Progress','Resolved','Closed']),date:'2024-0'+(ri(6)+1)+'-'+String(ri(28)+1).padStart(2,'0')}));
   const leaves = residents.slice(0,38).filter(()=>Math.random()>.45).map((r,i)=>({id:'LVE-'+String(i+1).padStart(4,'0'),residentId:r.id,residentName:r.name,hostelName:r.hostelName,fromDate:'2024-0'+(ri(5)+1)+'-'+String(ri(28)+1).padStart(2,'0'),toDate:'2024-0'+(ri(5)+2)+'-'+String(ri(28)+1).padStart(2,'0'),reason:rnd(LR),status:rnd(['Pending','Approved','Rejected']),appliedDate:'2024-0'+(ri(4)+1)+'-'+String(ri(28)+1).padStart(2,'0')}));
 
@@ -1246,7 +1247,9 @@ function seedDB() {
 // ═══════════════════════════════════════════════════════════
 
 // ─── Storage polyfill (localStorage fallback) ────────────
-if (!window.storage) {
+// Always use localStorage when running outside claude.ai
+const _isClaudeEnv = (typeof window.location !== 'undefined' && window.location.hostname.includes('claude.ai'));
+if (!window.storage || !_isClaudeEnv) {
   window.storage = {
     get:    async (k)   => { try { const v=localStorage.getItem(k); return v?{key:k,value:v}:null; } catch(e){return null;} },
     set:    async (k,v) => { try { localStorage.setItem(k,v); return {key:k,value:v}; } catch(e){return null;} },
@@ -1393,7 +1396,7 @@ async function loadDB() {
     await saveDB();
   } catch(e) {
     console.error('loadDB error:', e);
-    try { db = seedDB(); await saveDB(); } catch(e2) { db = seedDB(); setDBStatus('err'); }
+    try { db = seedDB(); await saveDB(); } catch(e2) { try { db = seedDB(); } catch(e3) {} setDBStatus('err'); }
   }
 }
 
@@ -1476,7 +1479,13 @@ async function startApp() {
   document.getElementById('topAv').textContent=currentUser.avatar;
   document.getElementById('topName').textContent=currentUser.short;
   document.getElementById('tbDate').textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  await loadDB();
+  try {
+    await loadDB();
+  } catch(e) {
+    console.error('loadDB failed, using seed data:', e);
+    if (!db) { try { db = seedDB(); } catch(e2) { db = {hostels:[],rooms:[],beds:[],residents:[],wardens:[],complaints:[],notices:[],settings:{},mealLogs:[],version:6}; } }
+    setDBStatus('err');
+  }
   buildNav();
   nav('dashboard');
   // Show ARIA fab for superadmin
