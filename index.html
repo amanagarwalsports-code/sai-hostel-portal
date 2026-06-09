@@ -1247,9 +1247,7 @@ function seedDB() {
 // ═══════════════════════════════════════════════════════════
 
 // ─── Storage polyfill (localStorage fallback) ────────────
-// Always use localStorage when running outside claude.ai
-const _isClaudeEnv = (typeof window.location !== 'undefined' && window.location.hostname.includes('claude.ai'));
-if (!window.storage || !_isClaudeEnv) {
+if (!window.storage) {
   window.storage = {
     get:    async (k)   => { try { const v=localStorage.getItem(k); return v?{key:k,value:v}:null; } catch(e){return null;} },
     set:    async (k,v) => { try { localStorage.setItem(k,v); return {key:k,value:v}; } catch(e){return null;} },
