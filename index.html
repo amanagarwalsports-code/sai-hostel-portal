@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- SAI Hostel Portal v2.0 | Production Build | 2026-06-09 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -211,11 +212,15 @@ tbody tr:hover td{background:#fafbff}
 .w-actions{display:flex;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
 
 /* ROOM MAP */
-.room-cell{width:32px;height:32px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;cursor:default;border:1px solid transparent;transition:transform .1s}
-.room-cell:hover{transform:scale(1.1)}
+.room-cell{width:58px;height:58px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;cursor:pointer;border:2px solid transparent;transition:transform .15s,box-shadow .15s;letter-spacing:.01em;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.room-cell:hover{transform:scale(1.1);box-shadow:0 4px 14px rgba(0,0,0,.15);z-index:2;position:relative}
+.room-cell:active{transform:scale(.96)}
 .rc-full{background:#fee2e2;border-color:#fca5a5;color:#991b1b}
 .rc-partial{background:#fef9c3;border-color:#fcd34d;color:#854d0e}
 .rc-vacant{background:#dcfce7;border-color:#86efac;color:#166534}
+.fm-hostel-hdr{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--navy);margin:16px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--border)}
+.fm-floor-label{font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin:10px 0 6px}
+.fm-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px}
 
 /* NOTICE */
 .notice-card{background:white;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;border-left:3px solid var(--accent)}
@@ -273,10 +278,6 @@ tbody tr:hover td{background:#fafbff}
 .login-divider{display:flex;align-items:center;gap:10px;margin:18px 0 14px}
 .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--border)}
 .login-divider span{font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
-.demo-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:16px}
-.demo-btn{padding:10px 6px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:none;color:white;text-align:center;transition:all .15s;line-height:1.5;box-shadow:0 2px 8px rgba(0,0,0,.2)}
-.demo-btn:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.3)}
-.demo-btn:active{transform:translateY(0)}
 .creds-box{padding:11px 13px;background:#f8faff;border-radius:10px;border:1px solid var(--border)}
 .creds-box-title{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;display:flex;align-items:center;gap:5px}
 .creds-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:10px;color:var(--text2)}
@@ -505,6 +506,43 @@ a, button, [onclick] { -webkit-tap-highlight-color: transparent; }
 .gs-live{background:rgba(22,163,74,.15);color:#4ade80;border:1px solid rgba(22,163,74,.2)}
 .gs-busy{background:rgba(37,99,235,.15);color:#60a5fa;border:1px solid rgba(37,99,235,.2)}
 .gs-fail{background:rgba(220,38,38,.15);color:#f87171;border:1px solid rgba(220,38,38,.2)}
+
+/* ─── Registration / User Management ─── */
+.reg-link{text-align:center;margin-top:14px;font-size:11px;color:var(--text3)}
+.reg-link a{color:var(--accent);font-weight:700;cursor:pointer;text-decoration:none}
+.reg-link a:hover{text-decoration:underline}
+.reg-panel{background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:18px;margin-top:10px}
+.reg-panel-title{font-size:13px;font-weight:800;color:#166534;margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.ticket-box{background:white;border:2px dashed #86efac;border-radius:10px;padding:16px;text-align:center;margin-top:12px}
+.ticket-id{font-size:22px;font-weight:900;color:var(--navy);letter-spacing:2px;font-family:monospace}
+.ticket-note{font-size:10px;color:var(--text3);margin-top:6px}
+.um-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.um-av{width:38px;height:38px;border-radius:10px;background:var(--navy);color:white;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.um-name{font-weight:700;font-size:13px;color:var(--text)}
+.um-meta{font-size:10px;color:var(--text3);margin-top:1px}
+.um-actions{margin-left:auto;display:flex;gap:6px}
+.badge-pending{background:#fef9c3;color:#854d0e;border:1px solid #fcd34d;border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700}
+.badge-approved{background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700}
+.badge-banned{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700}
+.tab-bar{display:flex;gap:4px;margin-bottom:16px;background:var(--bg);border-radius:8px;padding:4px}
+.tab-btn{flex:1;padding:7px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:all .15s}
+.tab-btn.active{background:var(--card);color:var(--navy);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+
+/* ─── ID Upload Widget ─── */
+.id-upload-wrap{margin-top:2px}
+.id-upload-box{border:2px dashed #cbd5e1;border-radius:10px;padding:14px 12px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;position:relative;background:#fafbff}
+.id-upload-box:hover{border-color:var(--accent);background:#f0f4ff}
+.id-upload-box input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.id-upload-box .upload-icon{font-size:22px;color:#94a3b8;display:block;margin-bottom:4px}
+.id-upload-box .upload-label{font-size:10px;color:var(--text3);font-weight:600}
+.id-upload-box .upload-hint{font-size:9px;color:#94a3b8;margin-top:2px}
+.id-preview{margin-top:8px;border-radius:8px;overflow:hidden;border:1.5px solid #e2e8f2;position:relative;display:none}
+.id-preview img{width:100%;max-height:140px;object-fit:cover;display:block}
+.id-preview-remove{position:absolute;top:5px;right:5px;background:rgba(0,0,0,.55);color:white;border:none;border-radius:6px;padding:2px 7px;font-size:10px;cursor:pointer;font-weight:700}
+.id-type-select{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.id-type-btn{padding:4px 10px;border-radius:6px;border:1.5px solid #e2e8f2;background:white;font-size:10px;font-weight:700;cursor:pointer;color:var(--text3);transition:all .1s}
+.id-type-btn.selected{border-color:var(--accent);background:#eff6ff;color:var(--navy)}
+.id-doc-thumb{width:44px;height:44px;border-radius:7px;object-fit:cover;border:1.5px solid #e2e8f2;flex-shrink:0;cursor:pointer}
 </style>
 </head>
 <body>
@@ -533,14 +571,14 @@ a, button, [onclick] { -webkit-tap-highlight-color: transparent; }
       <!-- Username -->
       <div class="form-field-login">
         <label class="label">Username</label>
-        <input class="input" id="lu" value="admin" placeholder="Enter username" autocomplete="username"/>
+        <input class="input" id="lu" placeholder="Enter username" autocomplete="username"/>
       </div>
 
       <!-- Password with show/hide toggle -->
       <div class="form-field-login">
         <label class="label">Password</label>
         <div class="pw-wrap">
-          <input class="input" id="lp" type="password" value="sai@admin123" placeholder="Enter password" autocomplete="current-password"/>
+          <input class="input" id="lp" type="password" placeholder="Enter password" autocomplete="current-password"/>
           <button class="pw-toggle" type="button" onclick="togglePw()" id="pwToggleBtn" title="Show/hide password">
             <i class="ti ti-eye" id="pwToggleIcon"></i>
           </button>
@@ -555,43 +593,51 @@ a, button, [onclick] { -webkit-tap-highlight-color: transparent; }
         <i class="ti ti-login"></i>&nbsp; Sign In
       </button>
 
-      <!-- Quick Demo Access -->
-      <div class="login-divider"><span>Quick Demo Access</span></div>
+      <!-- Register link -->
+      <div class="reg-link">New resident? <a onclick="toggleRegPanel()">Request Account →</a></div>
 
-      <div class="demo-grid">
-        <button class="demo-btn" style="background:linear-gradient(135deg,#0a1628,#1a3a6b)" onclick="ql('admin','sai@admin123')">
-          <i class="ti ti-shield-check" style="font-size:18px;display:block;margin-bottom:4px"></i>Super Admin
-        </button>
-        <button class="demo-btn" style="background:linear-gradient(135deg,#3730a3,#6d28d9)" onclick="ql('warden1','warden@123')">
-          <i class="ti ti-user-shield" style="font-size:18px;display:block;margin-bottom:4px"></i>Warden
-        </button>
-        <button class="demo-btn" style="background:linear-gradient(135deg,#15803d,#16a34a)" onclick="ql('resident1','res@123')">
-          <i class="ti ti-user" style="font-size:18px;display:block;margin-bottom:4px"></i>Resident
-        </button>
+      <!-- Registration panel (hidden by default) -->
+      <div class="reg-panel" id="regPanel" style="display:none">
+        <div class="reg-panel-title"><i class="ti ti-user-plus" style="font-size:16px"></i> Resident Registration Request</div>
+        <div id="regForm">
+          <div class="form-field-login"><label class="label">Full Name</label><input class="input" id="regName" placeholder="Your full name"/></div>
+          <div class="form-field-login"><label class="label">Sport / Event</label><input class="input" id="regSport" placeholder="e.g. Athletics, Boxing"/></div>
+          <div class="form-field-login"><label class="label">Mobile Number</label><input class="input" id="regMobile" placeholder="10-digit mobile"/></div>
+          <div class="form-field-login"><label class="label">SAI ID / Employee No. <span style="color:var(--text3);font-weight:400">(optional)</span></label><input class="input" id="regSaiId" placeholder="e.g. SAI-2024-001"/></div>
+
+          <!-- Government ID Upload -->
+          <div class="form-field-login">
+            <label class="label">Government ID <span style="color:var(--text3);font-weight:400">(Aadhaar / PAN / Passport)</span></label>
+            <div class="id-type-select" id="regIdTypeRow">
+              <button class="id-type-btn selected" onclick="selectIdType(this,'aadhaar')">🪪 Aadhaar</button>
+              <button class="id-type-btn" onclick="selectIdType(this,'pan')">💳 PAN</button>
+              <button class="id-type-btn" onclick="selectIdType(this,'passport')">📘 Passport</button>
+              <button class="id-type-btn" onclick="selectIdType(this,'voter')">🗳️ Voter ID</button>
+              <button class="id-type-btn" onclick="selectIdType(this,'driving')">🚗 Driving Licence</button>
+            </div>
+            <div class="id-upload-wrap">
+              <div class="id-upload-box" id="regIdUploadBox" onclick="document.getElementById('regIdFile').click()">
+                <input type="file" id="regIdFile" accept="image/*,.pdf" style="display:none" onchange="previewRegId(this)"/>
+                <i class="ti ti-cloud-upload upload-icon"></i>
+                <div class="upload-label">Click to upload or drag &amp; drop</div>
+                <div class="upload-hint">JPG, PNG or PDF · Max 2 MB</div>
+              </div>
+              <div class="id-preview" id="regIdPreview">
+                <img id="regIdPreviewImg" src="" alt="ID Preview"/>
+                <button class="id-preview-remove" onclick="removeRegId()">✕ Remove</button>
+              </div>
+              <div id="regIdFileName" style="font-size:9px;color:#16a34a;margin-top:4px;font-weight:600"></div>
+            </div>
+          </div>
+
+          <div class="err-msg" id="regErr" style="margin-bottom:8px"><i class="ti ti-alert-circle"></i> <span id="regErrMsg"></span></div>
+          <button class="btn-login" style="background:linear-gradient(135deg,#166534,#16a34a)" onclick="submitRegistration()">
+            <i class="ti ti-send"></i>&nbsp; Submit Request
+          </button>
+        </div>
+        <div id="regSuccess" style="display:none"></div>
       </div>
 
-      <!-- Credentials reference -->
-      <div class="creds-box">
-        <div class="creds-box-title"><i class="ti ti-key" style="font-size:11px"></i> Demo Credentials</div>
-        <div class="creds-row">
-          <span class="creds-role">Admin</span>
-          <span class="creds-val">admin</span>
-          <span style="color:var(--text3);font-size:9px">/</span>
-          <span class="creds-val">sai@admin123</span>
-        </div>
-        <div class="creds-row">
-          <span class="creds-role">Warden</span>
-          <span class="creds-val">warden1</span>
-          <span style="color:var(--text3);font-size:9px">/</span>
-          <span class="creds-val">warden@123</span>
-        </div>
-        <div class="creds-row">
-          <span class="creds-role">Resident</span>
-          <span class="creds-val">resident1</span>
-          <span style="color:var(--text3);font-size:9px">/</span>
-          <span class="creds-val">res@123</span>
-        </div>
-      </div>
     </div>
   </div>
 </div>
@@ -668,6 +714,12 @@ a, button, [onclick] { -webkit-tap-highlight-color: transparent; }
           </div>
           <div class="card-body" id="dashVacantBody"></div>
         </div>
+      </div>
+
+
+      <!-- MY PROFILE (resident only) -->
+      <div class="page" id="page-my-profile">
+        <div id="myProfileContent" style="max-width:600px;margin:0 auto"></div>
       </div>
 
       <!-- HOSTELS -->
@@ -980,6 +1032,21 @@ a, button, [onclick] { -webkit-tap-highlight-color: transparent; }
       <div class="page" id="page-import-export"><div id="ieContent"></div></div>
 
       <!-- SETTINGS -->
+      <div class="page" id="page-user-mgmt">
+        <div class="page-hdr">
+          <div>
+            <div class="page-title"><i class="ti ti-users-group" style="color:var(--accent)"></i> User Management</div>
+            <div class="page-sub">Manage resident accounts, registrations and access</div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <button class="tab-btn active" id="umTab-pending" onclick="switchUMTab('pending')"><i class="ti ti-clock"></i> Pending Requests <span id="umPendingBadge" style="background:#f59e0b;color:white;border-radius:10px;padding:1px 7px;font-size:9px;margin-left:4px"></span></button>
+          <button class="tab-btn" id="umTab-active" onclick="switchUMTab('active')"><i class="ti ti-check"></i> Active Users</button>
+          <button class="tab-btn" id="umTab-banned" onclick="switchUMTab('banned')"><i class="ti ti-ban"></i> Banned</button>
+        </div>
+        <div id="umContent"></div>
+      </div>
+
       <div class="page" id="page-settings">
         <div class="ph"><div class="ph-left"><div class="ph-title">Settings</div><div class="ph-sub">System configuration, Google Sheets sync, and database management</div></div></div>
 
@@ -1102,7 +1169,7 @@ function doGet(e) {
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-ghost btn-sm" onclick="loadDB().then(()=>{refreshPage();toast('Database refreshed','success')})"><i class="ti ti-refresh"></i> Refresh DB</button>
               <button class="btn btn-excel btn-sm" onclick="exportFullReport()"><i class="ti ti-download"></i> Backup to Excel</button>
-              <button class="btn btn-danger btn-sm" onclick="confirmResetDB()"><i class="ti ti-trash"></i> Reset to Demo Data</button>
+              <button class="btn btn-danger btn-sm" onclick="confirmResetDB()"><i class="ti ti-trash"></i> Reset Database</button>
             </div>
           </div>
         </div>
@@ -1110,8 +1177,8 @@ function doGet(e) {
           <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:12px">User Accounts</div>
           <table><thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Status</th></tr></thead><tbody>
             <tr><td>admin</td><td>Super Administrator</td><td><span class="badge b-blue">Super Admin</span></td><td><span class="badge b-green">Active</span></td></tr>
-            <tr><td>warden1</td><td>Mr. Suresh Pandey</td><td><span class="badge b-purple">Warden</span></td><td><span class="badge b-green">Active</span></td></tr>
-            <tr><td>resident1</td><td>Arjun Kumar</td><td><span class="badge b-gray">Resident</span></td><td><span class="badge b-green">Active</span></td></tr>
+            <tr><td>warden1</td><td>Warden</td><td><span class="badge b-purple">Warden</span></td><td><span class="badge b-green">Active</span></td></tr>
+            <tr><td>resident1</td><td>Resident</td><td><span class="badge b-gray">Resident</span></td><td><span class="badge b-green">Active</span></td></tr>
           </tbody></table>
         </div>
       </div>
@@ -1193,6 +1260,11 @@ let toastTimer = null;
 
 // ─── SEED ───────────────────────────────────────
 function seedDB() {
+  // Empty database — fresh start. Add your real data via the portal.
+  const settings = {portalName:'SAI Hostel Management Portal',email:'admin@sai.gov.in',curfew:'22:00',academicYear:'2024-25'};
+  return {hostels:[],rooms:[],beds:[],residents:[],wardens:[],complaints:[],notices:[],settings,mealLogs:[],registrationRequests:[],residentUsers:[],version:8};
+}
+function seedDB_UNUSED_DEMO() {
   const FN = ['Arjun','Priya','Rahul','Ananya','Vikram','Deepa','Suresh','Meena','Rajesh','Kavya','Amit','Sunita','Rohit','Pooja','Sanjay','Nisha','Manoj','Rekha','Anil','Geeta','Sachin','Lata','Dinesh','Usha','Ramesh','Kiran','Mohan','Jyoti','Arun','Shobha'];
   const LN = ['Kumar','Sharma','Singh','Verma','Gupta','Yadav','Patel','Joshi','Mishra','Tiwari','Pandey','Srivastava','Chauhan','Nair','Iyer','Menon','Reddy','Rao','Das','Bhat'];
   const SP = ['Athletics','Swimming','Boxing','Wrestling','Weightlifting','Shooting','Archery','Badminton','Table Tennis','Hockey','Football','Volleyball','Gymnastics','Judo'];
@@ -1235,7 +1307,7 @@ function seedDB() {
 
   const settings = {portalName:'SAI Hostel Management Portal',email:'admin@sai.gov.in',curfew:'22:00',academicYear:'2024-25'};
 
-  return {hostels,rooms,beds,residents,wardens,complaints,notices,settings,mealLogs:[],version:6};
+  return {hostels,rooms,beds,residents,wardens,complaints,notices,settings,mealLogs:[],version:8};
 }
 
 // ─── STORAGE POLYFILL ───────────────────────────
@@ -1247,7 +1319,9 @@ function seedDB() {
 // ═══════════════════════════════════════════════════════════
 
 // ─── Storage polyfill (localStorage fallback) ────────────
-if (!window.storage) {
+// Always use localStorage when running outside claude.ai
+const _isClaudeEnv = (typeof window.location !== 'undefined' && window.location.hostname.includes('claude.ai'));
+if (!window.storage || !_isClaudeEnv) {
   window.storage = {
     get:    async (k)   => { try { const v=localStorage.getItem(k); return v?{key:k,value:v}:null; } catch(e){return null;} },
     set:    async (k,v) => { try { localStorage.setItem(k,v); return {key:k,value:v}; } catch(e){return null;} },
@@ -1259,9 +1333,9 @@ if (!window.storage) {
 // ─── Key schema ──────────────────────────────────────────
 // window.storage (Claude API) = text data only, no photos
 // IndexedDB (local browser)   = Aadhaar photos (base64)
-const DB_PREFIX   = 'sai_v6_';
-const COLLECTIONS = ['hostels','rooms','beds','residents','wardens','complaints','notices','settings','mealLogs'];
-const DB_META_KEY = 'sai_v6_meta';
+const DB_PREFIX   = 'sai_v8_';
+const COLLECTIONS = ['hostels','rooms','beds','residents','wardens','complaints','notices','settings','mealLogs','registrationRequests','residentUsers'];
+const DB_META_KEY = 'sai_v8_meta';
 const IDB_NAME    = 'sai_photos_db';
 const IDB_STORE   = 'photos';
 
@@ -1335,7 +1409,7 @@ async function saveDB() {
     });
 
     await window.storage.set(DB_META_KEY, JSON.stringify({
-      version: 6, savedAt: new Date().toISOString(),
+      version: 8, savedAt: new Date().toISOString(),
       counts: { residents: (db.residents||[]).length, mealLogs: (db.mealLogs||[]).length }
     }));
 
@@ -1354,7 +1428,7 @@ async function loadDB() {
     const meta = await window.storage.get(DB_META_KEY);
     if (meta && meta.value) {
       const m = JSON.parse(meta.value);
-      if (m.version === 6) {
+      if (m.version === 7) {
         const results = await Promise.allSettled(
           COLLECTIONS.map(col => window.storage.get(DB_PREFIX + col))
         );
@@ -1367,7 +1441,9 @@ async function loadDB() {
             loaded[col] = col === 'settings' ? {} : [];
           }
         });
-        db = { ...loaded, version: 6 };
+        db = { ...loaded, version: 8 };
+        if (!db.registrationRequests) db.registrationRequests = [];
+        if (!db.residentUsers) db.residentUsers = [];
         if (!db.mealLogs) db.mealLogs = [];
         // Reattach photos from IndexedDB
         await loadAllPhotos();
@@ -1380,8 +1456,8 @@ async function loadDB() {
       const legacy = await window.storage.get(DB_KEY);
       if (legacy && legacy.value) {
         const p = JSON.parse(legacy.value);
-        if (p.version === 4 || p.version === 5) {
-          db = { ...p, version: 6 };
+        if (p.version === 4 || p.version === 5 || p.version === 6) {
+          db = { ...p, version: 8 };
           if (!db.mealLogs) db.mealLogs = [];
           await saveDB();
           setDBStatus('ok');
@@ -1424,22 +1500,46 @@ function setDBStatus(s) {
 // ─── AUTH ────────────────────────────────────────
 const USERS = {
   admin:    {id:'U001',role:'superadmin',name:'Super Administrator',avatar:'SA',short:'Admin'},
-  warden1:  {id:'U002',role:'warden',name:'Mr. Suresh Pandey',avatar:'SP',short:'Warden'},
-  resident1:{id:'U003',role:'resident',name:'Arjun Kumar',avatar:'AK',short:'Arjun'},
+  warden1:  {id:'U002',role:'warden',name:'Warden',avatar:'WD',short:'Warden'},
+  resident1:{id:'U003',role:'resident',name:'Resident',avatar:'RS',short:'Resident'},
 };
-const CREDS = {admin:'sai@admin123',warden1:'warden@123',resident1:'res@123'};
+const CREDS = {admin:'sai@2025',warden1:'warden@2025',resident1:'resident@2025'};
 
 function doLogin() {
   const u=document.getElementById('lu').value.trim(), p=document.getElementById('lp').value.trim();
   const errEl=document.getElementById('lerr');
   const btn=document.getElementById('loginBtn');
+  // Check static admin/warden accounts first
   if (CREDS[u]===p && USERS[u]) {
     errEl.classList.remove('visible');
     btn.classList.add('loading');
     btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i>&nbsp; Signing in…';
     currentUser=USERS[u];
+    try { localStorage.setItem('sai_session', JSON.stringify({username:u, ts:Date.now()})); } catch(e){}
     setTimeout(()=>startApp(),400);
-  } else {
+    return;
+  }
+  // Check dynamic resident accounts from DB
+  if (db && db.residentUsers) {
+    const ru = db.residentUsers.find(r => r.username === u && r.password === p && r.status === 'active');
+    if (ru) {
+      errEl.classList.remove('visible');
+      btn.classList.add('loading');
+      btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i>&nbsp; Signing in…';
+      currentUser = {id:ru.id, role:'resident', name:ru.name, avatar:ru.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(), short:ru.name.split(' ')[0], residentUserId:ru.id};
+      try { localStorage.setItem('sai_session', JSON.stringify({username:u, ts:Date.now(), isResidentUser:true, residentUserId:ru.id})); } catch(e){}
+      setTimeout(()=>startApp(),400);
+      return;
+    }
+    // Check if banned
+    const banned = db.residentUsers.find(r => r.username === u && r.status === 'banned');
+    if (banned) {
+      errEl.classList.add('visible');
+      document.getElementById('lerr').innerHTML='<i class="ti ti-ban"></i> Your account has been suspended. Contact the warden.';
+      return;
+    }
+  }
+  {
     errEl.classList.add('visible');
     document.getElementById('lp').value='';
     document.getElementById('lp').focus();
@@ -1448,7 +1548,7 @@ function doLogin() {
     box.style.animation='shake .3s ease';
   }
 }
-function ql(u,p){document.getElementById('lu').value=u;document.getElementById('lp').value=p;document.getElementById('lerr').classList.remove('visible');doLogin();}
+
 function doLogout(){
   const fab=document.getElementById('ariaFab');
   if(fab)fab.style.display='none';
@@ -1456,6 +1556,7 @@ function doLogout(){
   if(panel)panel.classList.remove('aria-visible');
   currentUser=null;
   dashOverrides={};
+  try { localStorage.removeItem('sai_session'); } catch(e){}
   document.getElementById('mainApp').style.display='none';
   document.getElementById('loginPage').classList.add('visible');
   document.getElementById('lu').value='';
@@ -1481,8 +1582,25 @@ async function startApp() {
     await loadDB();
   } catch(e) {
     console.error('loadDB failed, using seed data:', e);
-    if (!db) { try { db = seedDB(); } catch(e2) { db = {hostels:[],rooms:[],beds:[],residents:[],wardens:[],complaints:[],notices:[],settings:{},mealLogs:[],version:6}; } }
+    if (!db) { try { db = seedDB(); } catch(e2) { db = {hostels:[],rooms:[],beds:[],residents:[],wardens:[],complaints:[],notices:[],settings:{},mealLogs:[],registrationRequests:[],residentUsers:[],version:8}; } }
     setDBStatus('err');
+  }
+  // Restore resident user session after DB loaded
+  if (window._pendingResidentSession && db && db.residentUsers) {
+    const s = window._pendingResidentSession;
+    const ru = db.residentUsers.find(r => r.id === s.residentUserId && r.status === 'active');
+    if (ru) {
+      currentUser = {id:ru.id, role:'resident', name:ru.name, avatar:ru.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(), short:ru.name.split(' ')[0], residentUserId:ru.id};
+      document.getElementById('sbAv').textContent = currentUser.avatar;
+      document.getElementById('sbName').textContent = currentUser.name;
+      document.getElementById('sbRole').textContent = 'Resident';
+      document.getElementById('topAv').textContent = currentUser.avatar;
+      document.getElementById('topName').textContent = currentUser.short;
+      localStorage.setItem('sai_session', JSON.stringify({username:ru.username, ts:Date.now(), isResidentUser:true, residentUserId:ru.id}));
+    } else {
+      localStorage.removeItem('sai_session');
+    }
+    window._pendingResidentSession = null;
   }
   buildNav();
   nav('dashboard');
@@ -1499,7 +1617,9 @@ const NAVITEMS = [
   {id:'beds',          label:'Beds',             icon:'ti-bed',                roles:['superadmin','warden']},
   {id:'residents',     label:'Residents',        icon:'ti-users',              roles:['superadmin','warden']},
   {id:'wardens',       label:'Wardens',          icon:'ti-shield',             roles:['superadmin']},
+  {id:'user-mgmt',     label:'User Management',  icon:'ti-users-group',        roles:['superadmin','warden'],badge:'regReq'},
   {id:'assign-room',   label:'Assign Room',      icon:'ti-map-pin',            roles:['warden']},
+  {id:'my-profile',     label:'My Profile',       icon:'ti-user-circle',        roles:['resident']},
   {id:'meals',          label:'Meal Attendance',  icon:'ti-salad',              roles:['superadmin','warden','resident'],badge:'meals'},
   {id:'meal-records',   label:'Meal Records',     icon:'ti-chart-bar',          roles:['superadmin','warden']},
   {id:'complaints',    label:'Complaints',       icon:'ti-message-circle',     roles:['superadmin','warden','resident'],badge:'cmp'},
@@ -1537,6 +1657,8 @@ function getRender(page) {
     'assign-room':   ()=>renderAssignRoom(),
     'import-export': ()=>renderIE(),
     settings:        ()=>renderSettings(),
+    'user-mgmt':     ()=>renderUserMgmt(),
+    'my-profile':    ()=>renderMyProfile(),
   };
   return map[page] || null;
 }
@@ -1544,7 +1666,7 @@ function getRender(page) {
 const TITLES = {
   dashboard:'Dashboard',hostels:'Hostels',rooms:'Room Management',beds:'Bed Management',
   residents:'Residents',wardens:'Wardens',meals:'Meal Attendance','meal-records':'Meal Records',complaints:'Complaints',
-  notices:'Notices',reports:'Reports & Analytics','ai-assistant':'AI Assistant','assign-room':'Assign Room','import-export':'Import / Export',settings:'Settings'
+  notices:'Notices',reports:'Reports & Analytics','ai-assistant':'AI Assistant','assign-room':'Assign Room','import-export':'Import / Export',settings:'Settings','user-mgmt':'User Management','my-profile':'My Profile'
 };
 
 function nav(page) {
@@ -1591,9 +1713,266 @@ function bdg(s) {
 }
 
 // ═══════════════════════════════════════════════
+// RESIDENT PERSONAL DASHBOARD
+// ═══════════════════════════════════════════════
+function renderResidentDashboard() {
+  // Find resident record matching logged-in user
+  const ru = (db.residentUsers||[]).find(u => u.id === currentUser.residentUserId);
+  // Try to find resident record by name match
+  const resRecord = db.residents.find(r =>
+    r.name && ru && r.name.toLowerCase() === ru.name.toLowerCase() && r.status === 'Active'
+  ) || db.residents.find(r =>
+    r.name && r.name.toLowerCase() === currentUser.name.toLowerCase() && r.status === 'Active'
+  );
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const myMealLogs = resRecord ? (db.mealLogs||[]).filter(l => l.residentId === resRecord.id && l.date === todayStr) : [];
+  const myComplaints = resRecord ? db.complaints.filter(c => c.residentName === resRecord.name) : [];
+  const openComplaints = myComplaints.filter(c => c.status === 'Open' || c.status === 'In Progress');
+  const recentNotices = (db.notices||[]).slice(0,5);
+
+  const mealStatus = m => {
+    const log = myMealLogs.find(l => l.meal === m);
+    if (!log) return `<span class="badge b-gray">Not marked</span>`;
+    return log.status === 'Ate' ? `<span class="badge b-green">Ate ✓</span>` : `<span class="badge b-red">Skipped</span>`;
+  };
+
+  document.getElementById('dashStats').innerHTML = '';
+  document.getElementById('dashOcc').innerHTML = '';
+  document.getElementById('dashPending').innerHTML = '';
+  document.getElementById('dashResTable').innerHTML = '';
+  document.getElementById('bnTitle').textContent = 'Welcome, ' + currentUser.short + '!';
+  document.getElementById('bnMeta').textContent = new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('bnOcc').textContent = resRecord ? (resRecord.hostelName || '—').split(' ')[0] : 'Hostel';
+
+  // Build resident personal page
+  const pg = document.getElementById('page-dashboard');
+  // Find or create resident-content div
+  let rc = document.getElementById('residentDashContent');
+  if (!rc) {
+    rc = document.createElement('div');
+    rc.id = 'residentDashContent';
+    pg.appendChild(rc);
+  }
+
+  rc.innerHTML = `
+    <!-- My Room Card -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px">
+      <div class="stat-card" style="background:#e0f2fe;border-color:#7dd3fc">
+        <div class="stat-icon" style="background:#bae6fd"><i class="ti ti-door" style="font-size:16px;color:#0369a1"></i></div>
+        <div class="stat-label">My Room</div>
+        <div class="stat-val" style="font-size:18px;color:#0369a1">${resRecord ? resRecord.roomNumber : '—'}</div>
+        <div style="font-size:9px;color:#0369a1;margin-top:2px">${resRecord ? resRecord.hostelName : 'Not assigned yet'}</div>
+      </div>
+      <div class="stat-card" style="background:#dcfce7;border-color:#86efac">
+        <div class="stat-icon" style="background:#bbf7d0"><i class="ti ti-bed" style="font-size:16px;color:#166534"></i></div>
+        <div class="stat-label">My Bed</div>
+        <div class="stat-val" style="font-size:18px;color:#166534">${resRecord ? resRecord.bedNumber : '—'}</div>
+        <div style="font-size:9px;color:#166534;margin-top:2px">Bed Number</div>
+      </div>
+      <div class="stat-card" style="background:#fef9c3;border-color:#fcd34d">
+        <div class="stat-icon" style="background:#fde68a"><i class="ti ti-message-circle" style="font-size:16px;color:#a16207"></i></div>
+        <div class="stat-label">Open Complaints</div>
+        <div class="stat-val" style="font-size:24px;color:#a16207">${openComplaints.length}</div>
+        <div style="font-size:9px;color:#a16207;margin-top:2px;cursor:pointer" onclick="nav('complaints')">→ View complaints</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#f3e8ff"><i class="ti ti-salad" style="font-size:16px;color:#7e22ce"></i></div>
+        <div class="stat-label">Meals Today</div>
+        <div class="stat-val" style="font-size:24px;color:#7e22ce">${myMealLogs.filter(l=>l.status==='Ate').length}/3</div>
+        <div style="font-size:9px;color:#7e22ce;margin-top:2px;cursor:pointer" onclick="nav('meals')">→ Mark attendance</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <!-- My Profile -->
+      <div class="card">
+        <div class="card-hdr"><i class="ti ti-user" style="margin-right:6px;color:var(--accent)"></i>My Profile</div>
+        <div class="card-body">
+          ${resRecord ? `
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+              <div style="width:48px;height:48px;background:var(--navy);border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:16px;flex-shrink:0">${resRecord.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+              <div><div style="font-size:14px;font-weight:800;color:var(--navy)">${resRecord.name}</div><div style="font-size:10px;color:var(--accent);font-weight:700">${resRecord.sport}</div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px;font-size:11px">
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">ID</span><span style="font-weight:700;font-family:monospace">${resRecord.id}</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Gender</span><span style="font-weight:700">${resRecord.gender}</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Category</span><span style="font-weight:700">${resRecord.category}</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Check-In</span><span style="font-weight:700">${resRecord.checkInDate || '—'}</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Mobile</span><span style="font-weight:700">${resRecord.mobile || '—'}</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">Status</span>${bdg(resRecord.status)}</div>
+            </div>` : `
+            <div style="text-align:center;padding:20px;color:var(--text3)">
+              <i class="ti ti-user-off" style="font-size:28px;display:block;margin-bottom:8px;opacity:.4"></i>
+              <div style="font-size:11px">Your resident profile hasn't been linked yet.</div>
+              <div style="font-size:10px;margin-top:6px;color:var(--text3)">Contact warden to link your account.</div>
+            </div>`}
+        </div>
+      </div>
+
+      <!-- Today's Meals -->
+      <div class="card">
+        <div class="card-hdr"><i class="ti ti-salad" style="margin-right:6px;color:#16a34a"></i>Today's Meals</div>
+        <div class="card-body">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            ${['Breakfast','Lunch','Dinner'].map((m,i)=>`
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:#fafbff;border:1px solid var(--border)">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <span style="font-size:18px">${['🌅','☀️','🌙'][i]}</span>
+                  <div>
+                    <div style="font-size:12px;font-weight:700">${m}</div>
+                    <div style="font-size:9px;color:var(--text3)">${['7:00–8:30 AM','12:30–2:00 PM','7:30–9:00 PM'][i]}</div>
+                  </div>
+                </div>
+                ${mealStatus(m)}
+              </div>`).join('')}
+          </div>
+          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="nav('meals')">
+            <i class="ti ti-edit"></i> Go to Meal Attendance
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notices & Complaints -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="card">
+        <div class="card-hdr"><i class="ti ti-bell" style="margin-right:6px;color:var(--accent)"></i>Recent Notices</div>
+        <div class="card-body" style="padding:8px 12px">
+          ${recentNotices.length ? recentNotices.map(n=>`
+            <div style="padding:9px 0;border-bottom:1px solid var(--border)">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                ${bdg(n.priority)}
+                <span style="font-size:11px;font-weight:700;color:var(--text)">${n.title}</span>
+              </div>
+              <div style="font-size:10px;color:var(--text2)">${n.body.slice(0,80)}${n.body.length>80?'…':''}</div>
+              <div style="font-size:9px;color:var(--text3);margin-top:3px">${n.date} · by ${n.by}</div>
+            </div>`).join('') : '<div class="empty-state"><i class="ti ti-bell-off"></i><p>No notices yet.</p></div>'}
+          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:8px" onclick="nav('notices')">View All Notices</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><i class="ti ti-message-circle" style="margin-right:6px;color:#dc2626"></i>My Complaints</div>
+        <div class="card-body" style="padding:8px 12px">
+          ${myComplaints.length ? myComplaints.slice(0,4).map(c=>`
+            <div style="padding:9px 0;border-bottom:1px solid var(--border)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+                <span style="font-size:11px;font-weight:700">${c.type}</span>
+                ${bdg(c.status)}
+              </div>
+              <div style="font-size:10px;color:var(--text2)">${(c.description||'').slice(0,70)}</div>
+              <div style="font-size:9px;color:var(--text3);margin-top:3px">${c.date} · ${bdg(c.priority)}</div>
+            </div>`).join('') : '<div class="empty-state"><i class="ti ti-check"></i><p>No complaints raised.</p></div>'}
+          <button class="btn btn-accent btn-sm" style="width:100%;justify-content:center;margin-top:8px" onclick="nav('complaints')">
+            <i class="ti ti-plus"></i> Raise New Complaint
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// MY PROFILE PAGE (resident)
+// ═══════════════════════════════════════════════
+function renderMyProfile() {
+  if (currentUser.role !== 'resident') return;
+  const ru = (db.residentUsers||[]).find(u => u.id === currentUser.residentUserId);
+  const resRecord = db.residents.find(r =>
+    r.name && ru && r.name.toLowerCase() === ru.name.toLowerCase() && r.status === 'Active'
+  ) || db.residents.find(r =>
+    r.name && r.name.toLowerCase() === currentUser.name.toLowerCase() && r.status === 'Active'
+  );
+  const el = document.getElementById('myProfileContent');
+  if (!el) return;
+
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-hdr"><i class="ti ti-user-circle" style="margin-right:6px;color:var(--accent)"></i>My Account</div>
+      <div class="card-body">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+          <div style="width:60px;height:60px;background:var(--navy);border-radius:14px;display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:20px;flex-shrink:0">${currentUser.avatar}</div>
+          <div>
+            <div style="font-size:16px;font-weight:900;color:var(--navy)">${currentUser.name}</div>
+            <div style="font-size:11px;color:var(--accent);font-weight:700;margin-top:2px">Resident</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">Username: <b style="font-family:monospace">${ru ? ru.username : '—'}</b></div>
+          </div>
+        </div>
+        ${ru ? `
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;margin-bottom:14px">
+          <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Account Credentials</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="background:white;border-radius:8px;padding:10px;border:1px solid #86efac;text-align:center">
+              <div style="font-size:9px;color:var(--text3)">USERNAME</div>
+              <div style="font-size:14px;font-weight:900;font-family:monospace;color:var(--navy)">${ru.username}</div>
+            </div>
+            <div style="background:white;border-radius:8px;padding:10px;border:1px solid #86efac;text-align:center">
+              <div style="font-size:9px;color:var(--text3)">TICKET ID</div>
+              <div style="font-size:12px;font-weight:900;font-family:monospace;color:var(--navy)">${ru.ticketId || '—'}</div>
+            </div>
+          </div>
+          <div style="font-size:9px;color:#166534;margin-top:10px;text-align:center"><i class="ti ti-check"></i> Account approved by ${ru.approvedBy || 'Admin'} on ${ru.approvedAt ? new Date(ru.approvedAt).toLocaleDateString('en-IN') : '—'}</div>
+        </div>` : ''}
+      </div>
+    </div>
+
+    ${resRecord ? `
+    <div class="card">
+      <div class="card-hdr"><i class="ti ti-id" style="margin-right:6px;color:var(--navy)"></i>Hostel Details</div>
+      <div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${[
+            ['Resident ID', resRecord.id, 'monospace'],
+            ['Sport / Event', resRecord.sport, ''],
+            ['Gender', resRecord.gender, ''],
+            ['Category', resRecord.category, ''],
+            ['Hostel', resRecord.hostelName, ''],
+            ['Room No.', resRecord.roomNumber, 'monospace'],
+            ['Bed No.', resRecord.bedNumber, 'monospace'],
+            ['Check-In Date', resRecord.checkInDate || '—', ''],
+            ['Mobile', resRecord.mobile || '—', ''],
+            ['Status', null, ''],
+          ].map(([label, val, font]) => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+              <span style="font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.04em">${label}</span>
+              ${val !== null ? `<span style="font-size:11px;font-weight:700;${font?'font-family:'+font:''}">${val}</span>` : bdg(resRecord.status)}
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>` : `
+    <div class="card">
+      <div class="card-body" style="text-align:center;padding:40px">
+        <i class="ti ti-user-off" style="font-size:36px;color:var(--text3);display:block;margin-bottom:10px;opacity:.4"></i>
+        <div style="font-size:12px;font-weight:700;color:var(--text2)">Profile Not Linked</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:6px">Your account hasn't been linked to a resident record yet.<br>Please contact your warden.</div>
+      </div>
+    </div>`}`;
+}
+
+// ═══════════════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════════════
 function renderDashboard() {
+  // Resident sees their personal dashboard
+  if (currentUser.role === 'resident') {
+    // Hide admin-only sections
+    document.getElementById('dashStats').style.display = 'none';
+    document.getElementById('dashOcc').closest('.row2') && (document.getElementById('dashOcc').closest('.row2').style.display = 'none');
+    document.querySelectorAll('.page.active .card').forEach(c => {
+      if (c.querySelector('#dashResTable')) c.style.display = 'none';
+    });
+    document.getElementById('bnOcc').closest('.dash-banner-occ') && (document.getElementById('bnOcc').closest('.dash-banner-occ').style.cssText = 'background:rgba(249,115,22,.15);border-color:rgba(249,115,22,.3)');
+    renderResidentDashboard();
+    return;
+  }
+  // Show admin sections
+  document.getElementById('dashStats').style.display = '';
+  const row2 = document.getElementById('dashOcc')?.closest('.row2');
+  if (row2) row2.style.display = '';
+  const dashResCard = document.getElementById('dashResTable')?.closest('.card');
+  if (dashResCard) dashResCard.style.display = '';
+  // Remove resident content if it exists
+  document.getElementById('residentDashContent')?.remove();
+
   const occ=db.beds.filter(b=>b.status==='Occupied').length, vac=db.beds.length-occ;
   const aRes=db.residents.filter(r=>r.status==='Active').length;
   const occPct=db.beds.length?Math.round(occ/db.beds.length*100):0;
@@ -1785,39 +2164,61 @@ function renderRooms(){
   // ── Floor Map ──
   const hs=[...new Set(r.map(x=>x.hostelId))];
   const mapEl=document.getElementById('floorMap');
-  mapEl.innerHTML=(isSA?`<div class="floor-edit-bar" style="${roomMapEditMode?'':'border-color:#e2e8f2;background:#f8faff'}">
-    <i class="ti ${roomMapEditMode?'ti-pencil':'ti-map'}" style="color:${roomMapEditMode?'#f59e0b':'#64748b'};font-size:15px"></i>
-    <span style="color:${roomMapEditMode?'#92400e':'#475569'}">${roomMapEditMode?'Edit Mode ON — click any room cell to edit it':'Floor Map — Super Admin: click any cell to edit, or enable Edit Mode'}</span>
-    ${isSA?`<button class="btn btn-xs" style="background:${roomMapEditMode?'#f59e0b':'var(--navy)'};color:white;border:none;margin-left:auto" onclick="roomMapEditMode=!roomMapEditMode;renderRooms()">
-      <i class="ti ${roomMapEditMode?'ti-check':'ti-pencil'}"></i> ${roomMapEditMode?'Done Editing':'Edit Mode'}
-    </button>`:''}
-  </div>`:'')
-  +hs.map(hid=>{
-    const hr=r.filter(x=>x.hostelId===hid), floors=[...new Set(hr.map(x=>x.floor))].sort();
-    return `<div style="margin-bottom:14px">
-      <div style="font-size:10px;font-weight:800;color:var(--text2);margin-bottom:6px;display:flex;align-items:center;gap:6px">
-        <span style="width:8px;height:8px;border-radius:50%;background:var(--navy);display:inline-block"></span>${hr[0]?.hostelName}
-        <span style="font-size:9px;font-weight:500;color:var(--text3)">(${hr.length} rooms)</span>
+  const isWarden = currentUser.role==='warden';
+  const canEdit = isSA || isWarden;
+
+  // Legend + edit bar
+  let mapHtml = `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;padding:10px 14px;background:#f8faff;border-radius:10px;border:1.5px solid #e2e8f2">
+    <div style="display:flex;align-items:center;gap:16px;font-size:11px;font-weight:600">
+      <span style="color:#475569"><i class="ti ti-map" style="margin-right:4px"></i>Floor Map</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:14px;height:14px;border-radius:3px;background:#fee2e2;border:2px solid #fca5a5;display:inline-block"></span><span style="color:#991b1b">Full</span></span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:14px;height:14px;border-radius:3px;background:#fef9c3;border:2px solid #fcd34d;display:inline-block"></span><span style="color:#854d0e">Partial</span></span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:14px;height:14px;border-radius:3px;background:#dcfce7;border:2px solid #86efac;display:inline-block"></span><span style="color:#166534">Vacant</span></span>
+    </div>
+    <span style="font-size:10px;color:#64748b">${canEdit ? 'Click any room to ' + (isSA ? 'edit' : 'assign resident') : ''}</span>
+  </div>`;
+
+  if (r.length === 0) {
+    mapHtml += `<div style="text-align:center;padding:40px 20px;color:var(--text3);font-size:12px">
+      <i class="ti ti-building-off" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i>
+      No rooms added yet. Add rooms to see the floor map.
+    </div>`;
+  }
+
+  mapHtml += hs.map(hid => {
+    const hr = r.filter(x => x.hostelId === hid);
+    const hostel = db.hostels.find(h => h.id === hid);
+    const floors = [...new Set(hr.map(x => x.floor))].sort((a,b)=>a-b);
+    const totalVacant = hr.reduce((s,rm)=>s+rm.vacantBeds,0);
+    return `<div style="margin-bottom:24px">
+      <div class="fm-hostel-hdr">
+        <i class="ti ti-building-skyscraper" style="font-size:18px;color:var(--accent)"></i>
+        <span>${hostel?.name || hr[0]?.hostelName}</span>
+        <span style="font-size:10px;font-weight:500;color:var(--text3);margin-left:4px">${hr.length} rooms · ${totalVacant} beds free</span>
       </div>`
-      +floors.map(f=>{
-        const fr=hr.filter(x=>x.floor===f);
-        return `<div style="margin-bottom:8px;display:flex;align-items:flex-start;gap:10px">
-          <div style="font-size:9px;color:var(--text3);min-width:42px;padding-top:7px;font-weight:700">Fl.${f}</div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px">
-            ${fr.map(rm=>{
-              const cls=rm.status==='Full'?'rc-full':rm.status==='Vacant'?'rc-vacant':'rc-partial';
-              const rmBeds=db.beds.filter(b=>b.roomNumber===rm.roomNumber);
-              const tooltip=`${rm.roomNumber}\n${rm.status} · ${rm.occupiedBeds}/${rm.capacity} beds${rmBeds.length?'\n'+rmBeds.map(b=>b.status==='Occupied'?'● '+b.residentName:'○ Vacant').join('\n'):''}`;
-              return `<div class="room-cell ${cls}${isSA?' edit-mode':''}"
-                title="${tooltip.replace(/"/g,"'")}"
-                onclick="${isSA?`openRoomModal('${rm.id}')`:''}"
-                style="${isSA?'cursor:pointer':''}"
-              >${rm.roomNumber.split('-').pop().replace(/^0+/,'')}</div>`;
+    + floors.map(f => {
+        const fr = hr.filter(x => x.floor === f);
+        return `<div>
+          <div class="fm-floor-label">Floor ${f}</div>
+          <div class="fm-row">
+            ${fr.map(rm => {
+              const cls = rm.status==='Full'?'rc-full':rm.status==='Vacant'?'rc-vacant':'rc-partial';
+              const beds = db.beds.filter(b=>b.roomNumber===rm.roomNumber);
+              const bedLines = beds.length ? beds.map(b=>b.status==='Occupied'?'● '+b.residentName:'○ Vacant').join('\n') : '';
+              const tip = rm.roomNumber+' | '+rm.status+' ('+rm.occupiedBeds+'/'+rm.capacity+' beds)'+(bedLines?'\n'+bedLines:'');
+              const clickFn = isSA
+                ? `openRoomModal('${rm.id}')`
+                : `nav('assign-room');setTimeout(()=>openAssignRoomPanel('${rm.id}'),300)`;
+              const roomLabel = rm.roomNumber.replace(/^[A-Z]+-/,'').replace(/^0+/,'');
+              return `<div class="room-cell ${cls}" title="${tip.replace(/"/g,"'")}" onclick="${canEdit?clickFn:''}" style="${canEdit?'':'cursor:default'}">${roomLabel}</div>`;
             }).join('')}
           </div>
         </div>`;
-      }).join('')+'</div>';
+      }).join('')
+    + '</div>';
   }).join('');
+
+  mapEl.innerHTML = mapHtml;
 
   // ── Rooms Table ──
   const visible = roomsShowAll ? r : r.slice(0, ROOMS_PAGE_SIZE);
@@ -2746,11 +3147,11 @@ async function saveSettings(){
 }
 async function confirmResetDB(){
   openModal('Reset Database',
-    `<div style="text-align:center;padding:8px"><div style="font-size:28px;color:#dc2626;margin-bottom:10px"><i class="ti ti-database-x"></i></div><div style="font-size:14px;font-weight:800;margin-bottom:6px">Reset entire database?</div><div style="font-size:11px;color:var(--text3)">All data will be permanently replaced with demo seed data. This cannot be undone.</div></div>`,
+    `<div style="text-align:center;padding:8px"><div style="font-size:28px;color:#dc2626;margin-bottom:10px"><i class="ti ti-database-x"></i></div><div style="font-size:14px;font-weight:800;margin-bottom:6px">Reset entire database?</div><div style="font-size:11px;color:var(--text3)">All data will be permanently deleted. This cannot be undone.</div></div>`,
     `<button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-danger btn-sm" onclick="doResetDB()"><i class="ti ti-trash"></i> Yes, Reset DB</button>`
   );
 }
-async function doResetDB(){db=seedDB();await saveDB();closeModal();refreshPage();updateBadges();toast('Database reset with fresh demo data.');}
+async function doResetDB(){db=seedDB();await saveDB();closeModal();refreshPage();updateBadges();toast('Database has been reset.');}
 
 // ═══════════════════════════════════════════════
 // GENERIC DELETE
@@ -3553,29 +3954,35 @@ function renderAssignRoom() {
 
   // Floor map
   const hostels = [...new Set(rooms.map(r => r.hostelId))];
-  document.getElementById('arFloorMap').innerHTML = hostels.map(hid => {
-    const hr = rooms.filter(r => r.hostelId === hid);
-    const floors = [...new Set(hr.map(r => r.floor))].sort((a,b) => a-b);
-    return '<div style="margin-bottom:14px">'
-      + '<div style="font-size:11px;font-weight:800;color:var(--navy);margin-bottom:8px;display:flex;align-items:center;gap:8px">'
-      + '<i class="ti ti-building-skyscraper" style="color:var(--accent)"></i>' + (hr[0]?.hostelName || hid) + '</div>'
-      + floors.map(fl => {
-          const fr = hr.filter(r => r.floor === fl);
-          return '<div style="margin-bottom:8px">'
-            + '<div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Floor ' + fl + '</div>'
-            + '<div style="display:flex;flex-wrap:wrap;gap:5px">'
-            + fr.map(rm => {
-                const cls = rm.status==='Full' ? 'rc-full' : rm.status==='Vacant' ? 'rc-vacant' : 'rc-partial';
-                const avail = rm.capacity - rm.occupiedBeds;
-                const tip = rm.roomNumber + ' — ' + rm.status + ' (' + avail + ' bed(s) free)';
-                return '<div class="room-cell ' + cls + '" style="cursor:pointer;width:36px;height:36px;font-size:9px" '
-                  + 'data-rmid="' + rm.id + '" onclick="openAssignRoomPanel(this.getAttribute(\'data-rmid\'))" title="' + tip + '">'
-                  + rm.roomNumber.split('-').pop().replace(/^0+/, '') + '</div>';
-              }).join('')
-            + '</div></div>';
-        }).join('')
-      + '</div>';
-  }).join('');
+  const arMapEl = document.getElementById('arFloorMap');
+  if (rooms.length === 0) {
+    arMapEl.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);font-size:12px"><i class="ti ti-building-off" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i>No rooms available.</div>';
+  } else {
+    arMapEl.innerHTML = hostels.map(hid => {
+      const hr = rooms.filter(r => r.hostelId === hid);
+      const hostelObj = db.hostels.find(h => h.id === hid);
+      const floors = [...new Set(hr.map(r => r.floor))].sort((a,b) => a-b);
+      const totalVacant = hr.reduce((s,rm) => s + rm.vacantBeds, 0);
+      return '<div style="margin-bottom:24px">'
+        + '<div class="fm-hostel-hdr"><i class="ti ti-building-skyscraper" style="font-size:18px;color:var(--accent)"></i>'
+        + '<span>' + (hostelObj?.name || hr[0]?.hostelName || hid) + '</span>'
+        + '<span style="font-size:10px;font-weight:500;color:var(--text3);margin-left:4px">' + hr.length + ' rooms · ' + totalVacant + ' beds free</span></div>'
+        + floors.map(fl => {
+            const fr = hr.filter(r => r.floor === fl);
+            return '<div><div class="fm-floor-label">Floor ' + fl + '</div>'
+              + '<div class="fm-row">'
+              + fr.map(rm => {
+                  const cls = rm.status==='Full' ? 'rc-full' : rm.status==='Vacant' ? 'rc-vacant' : 'rc-partial';
+                  const avail = rm.capacity - rm.occupiedBeds;
+                  const tip = rm.roomNumber + ' — ' + rm.status + ' (' + avail + ' bed(s) free)';
+                  const lbl = rm.roomNumber.replace(/^[A-Z]+-/,'').replace(/^0+/,'');
+                  return '<div class="room-cell ' + cls + '" data-rmid="' + rm.id + '" onclick="openAssignRoomPanel(this.getAttribute('data-rmid'))" title="' + tip + '">' + lbl + '</div>';
+                }).join('')
+              + '</div></div>';
+          }).join('')
+        + '</div>';
+    }).join('');
+  }
 
   // Hide detail panel initially
   document.getElementById('arResidentPanel').style.display = 'none';
@@ -4092,7 +4499,29 @@ function updateAutoSyncBtn() {
 const _origStartApp = typeof startApp === 'function' ? startApp : null;
 // Patch: load GS config when app starts
 document.addEventListener('DOMContentLoaded', ()=>{
-  // Delay to let startApp define itself via boot, then hook in
+  // Restore session on page refresh
+  try {
+    const saved = localStorage.getItem('sai_session');
+    if (saved) {
+      const s = JSON.parse(saved);
+      // Session valid for 12 hours
+      if (s && s.username && (Date.now() - s.ts) < 12*60*60*1000) {
+        if (USERS[s.username]) {
+          currentUser = USERS[s.username];
+          localStorage.setItem('sai_session', JSON.stringify({username:s.username, ts:Date.now()}));
+          startApp();
+          return;
+        } else if (s.isResidentUser) {
+          // Restore after DB loads
+          window._pendingResidentSession = s;
+        } else {
+          localStorage.removeItem('sai_session');
+        }
+      } else {
+        localStorage.removeItem('sai_session');
+      }
+    }
+  } catch(e) {}
 });
 
 // We hook into the existing loadDB flow by patching saveDB to re-populate GS fields
@@ -4484,6 +4913,404 @@ window.addEventListener('appinstalled', () => {
   document.getElementById('installBanner')?.classList.remove('show');
   console.log('SAI Hostel Portal installed!');
 });
+
+
+// ═══════════════════════════════════════════════════════════
+// REGISTRATION & USER MANAGEMENT SYSTEM
+// ═══════════════════════════════════════════════════════════
+
+function toggleRegPanel() {
+  const p = document.getElementById('regPanel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  if (p.style.display === 'block') document.getElementById('regName').focus();
+}
+
+function submitRegistration() {
+  const name   = document.getElementById('regName').value.trim();
+  const sport  = document.getElementById('regSport').value.trim();
+  const mobile = document.getElementById('regMobile').value.trim();
+  const saiId  = document.getElementById('regSaiId').value.trim();
+  const errEl  = document.getElementById('regErr');
+  const errMsg = document.getElementById('regErrMsg');
+
+  if (!name || !sport || !mobile) {
+    errEl.classList.add('visible');
+    errMsg.textContent = 'Please fill in Name, Sport and Mobile.';
+    return;
+  }
+  if (!/^[0-9]{10}$/.test(mobile)) {
+    errEl.classList.add('visible');
+    errMsg.textContent = 'Enter a valid 10-digit mobile number.';
+    return;
+  }
+  errEl.classList.remove('visible');
+
+  // Collect ID doc info
+  const idType  = window._regIdType || 'aadhaar';
+  const idData  = window._regIdData || null;   // base64 string
+  const idName  = window._regIdFileName || null;
+
+  // Generate ticket ID
+  const ticketId = 'REQ-' + Date.now().toString(36).toUpperCase().slice(-6);
+  const req = {
+    id: ticketId,
+    name, sport, mobile, saiId,
+    govIdType: idType,
+    govIdData: idData,
+    govIdFileName: idName,
+    status: 'pending',
+    submittedAt: new Date().toISOString(),
+    reviewedBy: null, reviewedAt: null,
+    generatedUsername: null, generatedPassword: null
+  };
+
+  if (!db) { alert('Portal still loading. Please try again.'); return; }
+  if (!db.registrationRequests) db.registrationRequests = [];
+  db.registrationRequests.unshift(req);
+  saveDB();
+  updateBadges();
+
+  // Show success ticket
+  document.getElementById('regForm').style.display = 'none';
+  document.getElementById('regSuccess').style.display = 'block';
+  document.getElementById('regSuccess').innerHTML = `
+    <div style="text-align:center">
+      <i class="ti ti-circle-check" style="font-size:36px;color:#16a34a;display:block;margin-bottom:8px"></i>
+      <div style="font-weight:800;font-size:14px;color:#166534;margin-bottom:6px">Request Submitted!</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:14px">Your ticket has been created. Please note your Ticket ID:</div>
+      <div class="ticket-box">
+        <div class="ticket-id">${ticketId}</div>
+        <div class="ticket-note">Show this to the warden or admin when following up</div>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:12px">Once approved, your username &amp; password will be assigned. You can then login.</div>
+      <button class="btn-login" style="margin-top:14px;background:var(--navy)" onclick="document.getElementById('regPanel').style.display='none';document.getElementById('regForm').style.display='block';document.getElementById('regSuccess').style.display='none'">
+        <i class="ti ti-arrow-left"></i>&nbsp; Back to Login
+      </button>
+    </div>`;
+}
+
+// ── User Management Page ──────────────────────────────────
+let umCurrentTab = 'pending';
+
+function renderUserMgmt() {
+  if (!db) return;
+  if (!db.registrationRequests) db.registrationRequests = [];
+  if (!db.residentUsers) db.residentUsers = [];
+  switchUMTab(umCurrentTab);
+  updateBadges();
+}
+
+function switchUMTab(tab) {
+  umCurrentTab = tab;
+  ['pending','active','banned'].forEach(t => {
+    document.getElementById('umTab-'+t)?.classList.toggle('active', t===tab);
+  });
+  const el = document.getElementById('umContent');
+  if (!el) return;
+
+  const isSA = currentUser.role === 'superadmin';
+
+  if (tab === 'pending') {
+    const reqs = (db.registrationRequests||[]).filter(r=>r.status==='pending');
+    if (reqs.length === 0) {
+      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);font-size:12px"><i class="ti ti-inbox" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i>No pending requests.</div>';
+      return;
+    }
+    el.innerHTML = reqs.map(r => `
+      <div class="um-card" style="flex-wrap:wrap;align-items:flex-start">
+        <div style="display:flex;align-items:center;gap:12px;width:100%">
+          ${r.govIdData && r.govIdData.startsWith('data:image') ? `<img class="id-doc-thumb" data-reqid="${r.id}" onclick="viewIdDoc(this.getAttribute('data-reqid'))" title="Click to view ID" src="${r.govIdData}"/>` : `<div class="um-av" style="background:#f59e0b">${r.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>`}
+          <div style="flex:1;min-width:0">
+            <div class="um-name">${r.name}</div>
+            <div class="um-meta">${r.sport} · 📱 ${r.mobile}${r.saiId?' · ID: '+r.saiId:''}</div>
+            <div class="um-meta" style="margin-top:2px">Ticket: <b style="font-family:monospace">${r.id}</b> · ${new Date(r.submittedAt).toLocaleDateString('en-IN')}</div>
+            ${r.govIdType ? `<div class="um-meta" style="margin-top:2px;display:flex;align-items:center;gap:4px">
+              <span style="background:#eff6ff;color:#1d4ed8;border-radius:4px;padding:1px 6px;font-size:9px;font-weight:700;text-transform:uppercase">${r.govIdType}</span>
+              ${r.govIdData ? `<span style="color:#16a34a;font-size:9px;font-weight:600">✓ ID uploaded</span>` : '<span style="color:#f59e0b;font-size:9px;font-weight:600">⚠ No ID uploaded</span>'}
+            </div>` : ''}
+          </div>
+          <span class="badge-pending">Pending</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px;margin-left:auto;flex-wrap:wrap">
+          ${r.govIdData ? `<button class="btn btn-xs" style="background:#eff6ff;color:#1d4ed8;border:none" onclick="viewIdDoc('${r.id}')"><i class="ti ti-id"></i> View ID</button>` : ''}
+          <button class="btn btn-xs" style="background:#dcfce7;color:#166534;border:none" onclick="approveRequest('${r.id}')"><i class="ti ti-check"></i> Approve</button>
+          ${isSA ? `<button class="btn btn-xs" style="background:#fee2e2;color:#991b1b;border:none" onclick="rejectRequest('${r.id}')"><i class="ti ti-x"></i> Reject</button>` : ''}
+        </div>
+      </div>`).join('');
+
+  } else if (tab === 'active') {
+    const users = (db.residentUsers||[]).filter(r=>r.status==='active');
+    if (users.length === 0) {
+      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);font-size:12px"><i class="ti ti-users" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i>No active resident accounts yet.</div>';
+      return;
+    }
+    el.innerHTML = users.map(u => `
+      <div class="um-card">
+        <div class="um-av">${u.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div class="um-name">${u.name}</div>
+          <div class="um-meta">${u.sport} · Username: <b style="font-family:monospace">${u.username}</b></div>
+          <div class="um-meta" style="margin-top:2px">Approved: ${new Date(u.approvedAt).toLocaleDateString('en-IN')} by ${u.approvedBy}</div>
+        </div>
+        <span class="badge-approved">Active</span>
+        <div class="um-actions">
+          ${isSA ? `
+          <button class="btn btn-xs" style="background:#fef9c3;color:#854d0e;border:none" onclick="showCredentials('${u.id}')"><i class="ti ti-key"></i> Creds</button>
+          <button class="btn btn-xs" style="background:#fee2e2;color:#991b1b;border:none" onclick="banUser('${u.id}')"><i class="ti ti-ban"></i> Ban</button>
+          <button class="btn btn-xs" style="background:#fee2e2;color:#7f1d1d;border:none" onclick="removeUser('${u.id}')"><i class="ti ti-trash"></i> Remove</button>
+          ` : ''}
+        </div>
+      </div>`).join('');
+
+  } else if (tab === 'banned') {
+    const users = (db.residentUsers||[]).filter(r=>r.status==='banned');
+    if (!isSA) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);font-size:12px">Only Super Admin can view banned users.</div>'; return; }
+    if (users.length === 0) {
+      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);font-size:12px"><i class="ti ti-ban" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i>No banned users.</div>';
+      return;
+    }
+    el.innerHTML = users.map(u => `
+      <div class="um-card" style="opacity:.8">
+        <div class="um-av" style="background:#991b1b">${u.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div class="um-name">${u.name}</div>
+          <div class="um-meta">${u.sport} · Username: <b style="font-family:monospace">${u.username}</b></div>
+        </div>
+        <span class="badge-banned">Banned</span>
+        <div class="um-actions">
+          <button class="btn btn-xs" style="background:#dcfce7;color:#166534;border:none" onclick="unbanUser('${u.id}')"><i class="ti ti-check"></i> Unban</button>
+          <button class="btn btn-xs" style="background:#fee2e2;color:#7f1d1d;border:none" onclick="removeUser('${u.id}')"><i class="ti ti-trash"></i> Remove</button>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function generateUsername(name) {
+  const base = name.toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,8);
+  const suffix = Math.floor(100 + Math.random()*900);
+  return base + suffix;
+}
+
+function generatePassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#';
+  return Array.from({length:8}, ()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+
+function approveRequest(reqId) {
+  const req = db.registrationRequests.find(r=>r.id===reqId);
+  if (!req) return;
+
+  const username = generateUsername(req.name);
+  const password = generatePassword();
+  const userId   = 'RU-' + Date.now().toString(36).toUpperCase();
+
+  // Create resident user account
+  if (!db.residentUsers) db.residentUsers = [];
+  db.residentUsers.push({
+    id: userId, name: req.name, sport: req.sport, mobile: req.mobile,
+    saiId: req.saiId, username, password,
+    status: 'active',
+    approvedAt: new Date().toISOString(),
+    approvedBy: currentUser.name,
+    ticketId: reqId
+  });
+
+  // Mark request as approved
+  req.status = 'approved';
+  req.reviewedBy = currentUser.name;
+  req.reviewedAt = new Date().toISOString();
+  req.generatedUsername = username;
+  req.generatedPassword = password;
+
+  saveDB();
+  updateBadges();
+
+  // Show credentials to admin/warden
+  openModal('Account Approved ✓',
+    `<div style="text-align:center;margin-bottom:16px">
+      <i class="ti ti-circle-check" style="font-size:40px;color:#16a34a"></i>
+      <div style="font-weight:800;font-size:15px;margin-top:8px">${req.name}</div>
+      <div style="font-size:11px;color:var(--text3)">${req.sport}</div>
+    </div>
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:16px;text-align:center">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Generated Credentials</div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <div style="background:white;border-radius:8px;padding:10px 18px;border:1px solid #86efac">
+          <div style="font-size:9px;color:var(--text3)">USERNAME</div>
+          <div style="font-size:16px;font-weight:900;font-family:monospace;color:var(--navy)">${username}</div>
+        </div>
+        <div style="background:white;border-radius:8px;padding:10px 18px;border:1px solid #86efac">
+          <div style="font-size:9px;color:var(--text3)">PASSWORD</div>
+          <div style="font-size:16px;font-weight:900;font-family:monospace;color:var(--navy)">${password}</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:#854d0e;margin-top:10px;background:#fef9c3;border-radius:6px;padding:7px"><i class="ti ti-alert-triangle"></i> Share these credentials with the resident directly. Note them down.</div>
+    </div>`,
+    `<button class="btn btn-primary btn-sm" onclick="closeModal();renderUserMgmt()"><i class="ti ti-check"></i> Done</button>`
+  );
+}
+
+function rejectRequest(reqId) {
+  if (!confirm('Reject this registration request?')) return;
+  const req = db.registrationRequests.find(r=>r.id===reqId);
+  if (!req) return;
+  req.status = 'rejected';
+  req.reviewedBy = currentUser.name;
+  req.reviewedAt = new Date().toISOString();
+  saveDB();
+  updateBadges();
+  renderUserMgmt();
+  toast('Request rejected.');
+}
+
+function banUser(userId) {
+  if (!confirm('Ban this user? They will not be able to login.')) return;
+  const u = db.residentUsers.find(r=>r.id===userId);
+  if (!u) return;
+  u.status = 'banned';
+  saveDB();
+  renderUserMgmt();
+  toast('User banned.');
+}
+
+function unbanUser(userId) {
+  const u = db.residentUsers.find(r=>r.id===userId);
+  if (!u) return;
+  u.status = 'active';
+  saveDB();
+  renderUserMgmt();
+  toast('User unbanned.');
+}
+
+function removeUser(userId) {
+  if (!confirm('Permanently remove this user account? This cannot be undone.')) return;
+  db.residentUsers = (db.residentUsers||[]).filter(r=>r.id!==userId);
+  saveDB();
+  renderUserMgmt();
+  toast('User removed.');
+}
+
+function showCredentials(userId) {
+  const u = db.residentUsers.find(r=>r.id===userId);
+  if (!u) return;
+  openModal('Account Credentials — ' + u.name,
+    `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:16px;text-align:center">
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <div style="background:white;border-radius:8px;padding:10px 18px;border:1px solid #86efac">
+          <div style="font-size:9px;color:var(--text3)">USERNAME</div>
+          <div style="font-size:16px;font-weight:900;font-family:monospace;color:var(--navy)">${u.username}</div>
+        </div>
+        <div style="background:white;border-radius:8px;padding:10px 18px;border:1px solid #86efac">
+          <div style="font-size:9px;color:var(--text3)">PASSWORD</div>
+          <div style="font-size:16px;font-weight:900;font-family:monospace;color:var(--navy)">${u.password}</div>
+        </div>
+      </div>
+    </div>`,
+    `<button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button>`
+  );
+}
+
+// ── Badge count for pending requests ─────────────────────
+const _origUpdateBadges = typeof updateBadges === 'function' ? updateBadges : null;
+function updateBadges() {
+  if (_origUpdateBadges) _origUpdateBadges();
+  if (!db) return;
+  const pending = (db.registrationRequests||[]).filter(r=>r.status==='pending').length;
+  const badge = document.getElementById('nb-regReq');
+  if (badge) {
+    badge.textContent = pending;
+    badge.style.display = pending > 0 ? 'inline' : 'none';
+  }
+  const tabBadge = document.getElementById('umPendingBadge');
+  if (tabBadge) tabBadge.textContent = pending || '';
+}
+
+
+// ─── Registration ID Upload Helpers ──────────────────────
+let _regIdType = 'aadhaar';
+window._regIdType = 'aadhaar';
+window._regIdData = null;
+window._regIdFileName = null;
+
+function selectIdType(btn, type) {
+  document.querySelectorAll('.id-type-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  window._regIdType = type;
+}
+
+function previewRegId(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    alert('File too large. Maximum size is 2 MB.');
+    input.value = '';
+    return;
+  }
+  window._regIdFileName = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    window._regIdData = e.target.result;
+    const preview = document.getElementById('regIdPreview');
+    const previewImg = document.getElementById('regIdPreviewImg');
+    const fileNameEl = document.getElementById('regIdFileName');
+    const uploadBox = document.getElementById('regIdUploadBox');
+    if (file.type.startsWith('image/')) {
+      previewImg.src = e.target.result;
+      preview.style.display = 'block';
+      uploadBox.style.display = 'none';
+      fileNameEl.textContent = '';
+    } else {
+      // PDF - just show filename
+      preview.style.display = 'none';
+      uploadBox.style.display = 'block';
+      fileNameEl.innerHTML = '<i class="ti ti-file-type-pdf" style="color:#ef4444"></i> ' + file.name + ' — uploaded ✓';
+      uploadBox.style.borderColor = '#16a34a';
+      uploadBox.style.background = '#f0fdf4';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeRegId() {
+  window._regIdData = null;
+  window._regIdFileName = null;
+  document.getElementById('regIdPreview').style.display = 'none';
+  document.getElementById('regIdUploadBox').style.display = 'block';
+  document.getElementById('regIdUploadBox').style.borderColor = '';
+  document.getElementById('regIdUploadBox').style.background = '';
+  document.getElementById('regIdFileName').textContent = '';
+  document.getElementById('regIdFile').value = '';
+}
+
+function viewIdDoc(reqId) {
+  const r = (db.registrationRequests||[]).find(x => x.id === reqId);
+  if (!r || !r.govIdData) return;
+  const labels = {aadhaar:'Aadhaar Card', pan:'PAN Card', passport:'Passport', voter:'Voter ID', driving:'Driving Licence'};
+  const typeLabel = labels[r.govIdType] || r.govIdType || 'ID Document';
+  // Build body safely without embedding base64 in template literals
+  let bodyHtml;
+  if (r.govIdData.startsWith('data:image')) {
+    const img = document.createElement('img');
+    img.src = r.govIdData;
+    img.style.cssText = 'max-width:100%;max-height:420px;border-radius:10px;border:1.5px solid #e2e8f2;display:block;margin:0 auto';
+    const wrap = document.createElement('div');
+    wrap.style.textAlign = 'center';
+    wrap.appendChild(img);
+    bodyHtml = wrap.outerHTML;
+  } else {
+    const fn = r.govIdFileName || 'document.pdf';
+    bodyHtml = '<div style="text-align:center;padding:24px;color:#64748b">'
+      + '<i class="ti ti-file-type-pdf" style="font-size:48px;color:#ef4444;display:block;margin-bottom:10px"></i>'
+      + '<div style="font-size:12px;font-weight:700">' + fn + '</div>'
+      + '<div style="font-size:10px;margin-top:8px;color:#94a3b8">PDF stored with request. Image formats are recommended for in-app preview.</div>'
+      + '</div>';
+  }
+  openModal('Government ID — ' + r.name + ' (' + typeLabel + ')',
+    bodyHtml,
+    '<button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button>'
+  );
+}
+
 </script>
 
 </body>
