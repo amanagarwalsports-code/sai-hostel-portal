@@ -4971,67 +4971,58 @@ function removeAriaTyping(containerId, id) {
 <script>
 
 // ── PWA Install & Service Worker ─────────────────────────────────────────
-let deferredInstallPrompt = null;
-const isHosted = location.protocol === 'https:' || location.protocol === 'http:';
-const isBlob   = location.protocol === 'blob:' || location.protocol === 'blob-request:';
+var deferredInstallPrompt = null;
 
-if ('serviceWorker' in navigator && isHosted && !isBlob) {
+(function() {
   try {
-    const swCode = [
-      "const CACHE='sai-hostel-v1';",
-      "self.addEventListener('install',e=>{self.skipWaiting();});",
-      "self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});",
-      "self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));});"
-    ].join('');
-    const blob = new Blob([swCode], {type:'text/javascript'});
-    const swUrl = URL.createObjectURL(blob);
-    navigator.serviceWorker.register(swUrl).catch(()=>{});
+    if ('serviceWorker' in navigator &&
+        (location.protocol === 'https:' || location.protocol === 'http:')) {
+      var sw = "const C='sai-v1';self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))));self.clients.claim();});self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));});";
+      var blob = new Blob([sw], {type:'text/javascript'});
+      navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(function(){});
+    }
   } catch(e) {}
-}
+})();
 
 window.addEventListener('beforeinstallprompt', function(e) {
-  e.preventDefault();
-  deferredInstallPrompt = e;
+  e.preventDefault(); deferredInstallPrompt = e;
   setTimeout(function() {
-    if (!window.matchMedia('(display-mode: standalone)').matches &&
-        !sessionStorage.getItem('installDismissed')) {
-      var b = document.getElementById('installBanner');
-      if (b) b.classList.add('show');
+    if (!window.matchMedia('(display-mode: standalone)').matches && !sessionStorage.getItem('installDismissed')) {
+      var b = document.getElementById('installBanner'); if (b) b.classList.add('show');
     }
   }, 3000);
 });
-
 window.addEventListener('appinstalled', function() {
-  var b = document.getElementById('installBanner');
-  if (b) b.classList.remove('show');
+  var b = document.getElementById('installBanner'); if (b) b.classList.remove('show');
 });
-
 function installPWA() {
   if (deferredInstallPrompt) {
     deferredInstallPrompt.prompt();
     deferredInstallPrompt.userChoice.then(function(c) {
-      if (c.outcome === 'accepted') {
-        var b = document.getElementById('installBanner');
-        if (b) b.classList.remove('show');
-      }
+      if (c.outcome === 'accepted') { var b = document.getElementById('installBanner'); if (b) b.classList.remove('show'); }
       deferredInstallPrompt = null;
     });
   }
 }
-
 function dismissInstall() {
-  var b = document.getElementById('installBanner');
-  if (b) b.classList.remove('show');
+  var b = document.getElementById('installBanner'); if (b) b.classList.remove('show');
   sessionStorage.setItem('installDismissed', '1');
 }
 
 // ═══════════════════════════════════════════════════════════
-// REGISTRATION & USER MANAGEMENT SYSTEM
+// REGISTRATION SYSTEM — Fully Self-Contained
+// ═══════════════════════════════════════════════════════════
+// How it works:
+// 1. Resident registers → gets a RegistrationCode (encodes their info as base64)
+// 2. Warden pastes code → decodes info → adds to pending queue
+// 3. Warden clicks Approve → generates username+password → shows CredentialCode
+// 4. Warden sends CredentialCode to resident
+// 5. Resident pastes CredentialCode in "My Ticket" tab → gets logged in
+// No external database needed — codes carry all the data.
 // ═══════════════════════════════════════════════════════════
 
-// Login tab switcher
 function switchLoginTab(tab) {
-  var tabs = ['signin', 'ticket', 'register'];
+  var tabs = ['signin','ticket','register'];
   tabs.forEach(function(t) {
     var btn = document.getElementById('ltab-' + t);
     var panel = document.getElementById('lpanel-' + t);
@@ -5046,13 +5037,9 @@ function switchLoginTab(tab) {
   }
 }
 
-// Copy registration code helper
-function copyRegCode() {
-  var el = document.getElementById('fullCodeBox');
-  if (!el) return;
-  var text = el.textContent || el.innerText;
+function copyText(text, label) {
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(function() { toast('Registration code copied!'); });
+    navigator.clipboard.writeText(text).then(function() { toast((label || 'Text') + ' copied!'); });
   } else {
     var ta = document.createElement('textarea');
     ta.value = text;
@@ -5060,58 +5047,55 @@ function copyRegCode() {
     ta.select();
     document.execCommand('copy');
     document.body.removeChild(ta);
-    toast('Registration code copied!');
+    toast((label || 'Text') + ' copied!');
   }
 }
 
-// Ensure DB loaded before login-page actions
-async function ensureDBLoaded() {
-  if (db) return true;
-  try { await loadDB(); return !!db; }
-  catch(e) { try { db = seedDB(); } catch(e2) {} return true; }
+function copyRegCode() {
+  var el = document.getElementById('fullCodeBox');
+  if (el) copyText(el.textContent || el.innerText, 'Registration code');
 }
 
-// Generate username/password locally (AI generation handled separately in approveRequest)
+function ensureDBLoaded() {
+  if (db) return Promise.resolve(true);
+  return loadDB().then(function() { return true; }).catch(function() {
+    try { db = seedDB(); } catch(e) {}
+    return true;
+  });
+}
+
 function generateUsername(name) {
   var base = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8);
   return base + Math.floor(100 + Math.random() * 900);
 }
 
 function generatePassword() {
-  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#';
-  var pwd = '';
-  for (var i = 0; i < 9; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
-  return pwd;
+  var u = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  var l = 'abcdefghjkmnpqrstuvwxyz';
+  var n = '23456789';
+  var s = '@#$';
+  var all = u + l + n + s;
+  var pwd = u[Math.floor(Math.random()*u.length)]
+           + l[Math.floor(Math.random()*l.length)]
+           + n[Math.floor(Math.random()*n.length)]
+           + s[Math.floor(Math.random()*s.length)];
+  for (var i = 0; i < 5; i++) pwd += all[Math.floor(Math.random()*all.length)];
+  return pwd.split('').sort(function(){return Math.random()-.5;}).join('');
 }
 
-// AI credential generator via Claude API
-async function generateAICredentials(name, sport) {
-  try {
-    // 5 second timeout - don't block approval if API is slow
-    var controller = new AbortController();
-    var timer = setTimeout(function() { controller.abort(); }, 5000);
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 150,
-        messages: [{ role: 'user', content: 'Generate username and password for hostel resident. Name: ' + name + ', Sport: ' + sport + '. Username: lowercase, 6-12 chars, name+sport+numbers. Password: 8-9 chars, mixed case+numbers+symbol. Reply ONLY with valid JSON: {"username":"...","password":"..."}' }]
-      })
-    });
-    clearTimeout(timer);
-    if (!resp.ok) throw new Error('api');
-    var data = await resp.json();
-    var text = (data.content || []).map(function(b) { return b.text || ''; }).join('').trim();
-    var parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
-    if (parsed.username && parsed.password) return parsed;
-  } catch(e) { /* fallback to local */ }
-  return null;
+// Encode any object to a short-ish base64 string
+function encode64(obj) {
+  try { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); }
+  catch(e) { return ''; }
+}
+// Decode base64 string back to object
+function decode64(str) {
+  try { return JSON.parse(decodeURIComponent(escape(atob(str)))); }
+  catch(e) { return null; }
 }
 
-// ── SUBMIT REGISTRATION (resident side) ──────────────────────────────────
-async function submitRegistration() {
+// ── SUBMIT REGISTRATION ──────────────────────────────────────────────────
+function submitRegistration() {
   var name   = (document.getElementById('regName').value || '').trim();
   var sport  = (document.getElementById('regSport').value || '').trim();
   var mobile = (document.getElementById('regMobile').value || '').trim();
@@ -5121,222 +5105,224 @@ async function submitRegistration() {
   var btn    = document.getElementById('regSubmitBtn');
 
   if (!name || !sport || !mobile) {
-    errEl.classList.add('visible');
-    errMsg.textContent = 'Please fill in Name, Sport and Mobile.';
-    return;
+    errEl.classList.add('visible'); errMsg.textContent = 'Please fill in Name, Sport and Mobile number.'; return;
   }
   if (!/^[0-9]{10}$/.test(mobile)) {
-    errEl.classList.add('visible');
-    errMsg.textContent = 'Enter a valid 10-digit mobile number.';
-    return;
+    errEl.classList.add('visible'); errMsg.textContent = 'Enter a valid 10-digit mobile number.'; return;
   }
   errEl.classList.remove('visible');
 
-  btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i> Generating ticket...';
-  btn.style.pointerEvents = 'none';
-
-  await ensureDBLoaded();
-
-  var idType = window._regIdType || 'aadhaar';
-  var idData = window._regIdData || null;
-  var idName = window._regIdFileName || null;
   var ticketId = 'REQ-' + Date.now().toString(36).toUpperCase().slice(-6);
   var now = new Date().toISOString();
 
-  var req = {
-    id: ticketId, name: name, sport: sport, mobile: mobile, saiId: saiId,
-    govIdType: idType, govIdData: idData, govIdFileName: idName,
-    status: 'pending', submittedAt: now,
-    reviewedBy: null, reviewedAt: null,
-    generatedUsername: null, generatedPassword: null
-  };
+  // Also save locally in case same device
+  ensureDBLoaded().then(function() {
+    if (!db.registrationRequests) db.registrationRequests = [];
+    var req = {
+      id: ticketId, name: name, sport: sport, mobile: mobile, saiId: saiId,
+      govIdType: window._regIdType || 'aadhaar',
+      govIdData: window._regIdData || null,
+      govIdFileName: window._regIdFileName || null,
+      status: 'pending', submittedAt: now,
+      reviewedBy: null, reviewedAt: null,
+      generatedUsername: null, generatedPassword: null
+    };
+    db.registrationRequests.unshift(req);
+    saveDB();
+    try { updateBadges(); } catch(e) {}
+  });
 
-  if (!db.registrationRequests) db.registrationRequests = [];
-  db.registrationRequests.unshift(req);
-  await saveDB();
-  try { updateBadges(); } catch(e) {}
+  // Build portable registration code
+  var portableData = { id: ticketId, name: name, sport: sport, mobile: mobile, saiId: saiId, submittedAt: now };
+  var regCode = 'REG:' + ticketId + ':' + encode64(portableData);
 
-  // Build portable code: ticketId + base64(JSON) so warden can import cross-device
-  var portableData = { id: ticketId, name: name, sport: sport, mobile: mobile, saiId: saiId, govIdType: idType, submittedAt: now };
-  var fullCode = ticketId + ':' + btoa(unescape(encodeURIComponent(JSON.stringify(portableData))));
-
-  btn.innerHTML = '<i class="ti ti-send"></i> Submit Request';
-  btn.style.pointerEvents = '';
-
-  var successEl = document.getElementById('regSuccess');
   var formEl = document.getElementById('regForm');
+  var successEl = document.getElementById('regSuccess');
   if (formEl) formEl.style.display = 'none';
   if (successEl) {
     successEl.style.display = 'block';
     successEl.innerHTML = [
       '<div style="text-align:center;padding:4px 0">',
-      '<div style="font-size:36px;margin-bottom:10px">&#127915;</div>',
-      '<div style="font-weight:900;font-size:15px;color:#166534;margin-bottom:6px">Request Submitted!</div>',
-      '<div style="font-size:11px;color:#475569;margin-bottom:14px">Share the <b>Registration Code</b> below with the warden (WhatsApp / in person). They will import it and approve your account.</div>',
+      '<div style="font-size:36px;margin-bottom:8px">&#127915;</div>',
+      '<div style="font-weight:900;font-size:15px;color:#166534;margin-bottom:4px">Registration Submitted!</div>',
+      '<div style="font-size:11px;color:#475569;margin-bottom:14px">',
+      'Copy the <b>Registration Code</b> below and send it to the warden via <b>WhatsApp</b>.<br>',
+      'After they approve, you will get a <b>Credential Code</b> — paste it in the <b>My Ticket</b> tab to login.',
+      '</div>',
       '<div style="background:#0a1628;border-radius:12px;padding:16px;margin-bottom:14px;text-align:left">',
       '<div style="color:rgba(255,255,255,.5);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">TICKET ID</div>',
       '<div style="font-size:22px;font-weight:900;font-family:monospace;color:#f97316;letter-spacing:2px;margin-bottom:12px">' + ticketId + '</div>',
-      '<div style="color:rgba(255,255,255,.5);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">FULL REGISTRATION CODE</div>',
-      '<div id="fullCodeBox" style="background:rgba(255,255,255,.07);border-radius:7px;padding:8px 10px;font-family:monospace;font-size:8px;color:#93c5fd;word-break:break-all;line-height:1.6;max-height:72px;overflow-y:auto">' + fullCode + '</div>',
+      '<div style="color:rgba(255,255,255,.5);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">REGISTRATION CODE — SEND THIS TO WARDEN</div>',
+      '<div id="fullCodeBox" style="background:rgba(255,255,255,.08);border-radius:8px;padding:10px;font-family:monospace;font-size:8px;color:#93c5fd;word-break:break-all;line-height:1.6">' + regCode + '</div>',
       '</div>',
-      '<button class="btn-login" onclick="copyRegCode()" style="background:#1a3a6b;margin-bottom:8px">&#128203; Copy Registration Code</button>',
-      '<div style="font-size:10px;color:#64748b;margin-top:8px">After approval, use <b>My Ticket</b> tab to get your login credentials.</div>',
-      '</div>'
+      '<button class="btn-login" onclick="copyRegCode()" style="background:#1e3a8a;margin-bottom:8px">&#128203; Copy Registration Code (send to warden)</button>',
+      '<div style="font-size:10px;color:#64748b;margin-top:8px;background:#f8faff;border-radius:8px;padding:10px">',
+      '<b>Next steps:</b><br>1. Send this code to the warden on WhatsApp<br>',
+      '2. Warden will approve and send you a <b>Credential Code</b><br>',
+      '3. Come back here → <b>My Ticket</b> tab → paste the Credential Code to login',
+      '</div></div>'
     ].join('');
   }
 }
 
-// ── TICKET LOOKUP (resident checks status / gets credentials) ─────────────
-async function lookupTicket() {
-  var input = (document.getElementById('ticketInput').value || '').trim().toUpperCase();
+// ── MY TICKET / CREDENTIAL LOOKUP ────────────────────────────────────────
+function lookupTicket() {
+  var input = (document.getElementById('ticketInput').value || '').trim();
   var errEl  = document.getElementById('ticketErr');
   var errMsg = document.getElementById('ticketErrMsg');
   var result = document.getElementById('ticketResult');
-  var btn    = document.getElementById('ticketLookupBtn');
 
   if (!input) {
-    errEl.classList.add('visible');
-    errMsg.textContent = 'Please enter your Ticket ID.';
-    return;
+    errEl.classList.add('visible'); errMsg.textContent = 'Please enter your Ticket ID or Credential Code.'; return;
   }
   errEl.classList.remove('visible');
-  if (result) result.style.display = 'none';
+  if (result) result.style.display = 'block';
 
-  btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i> Searching...';
-  btn.style.pointerEvents = 'none';
+  // ── Case 1: Credential Code (CRED:username:password:name encoded)
+  if (input.startsWith('CRED:')) {
+    var parts = input.split(':');
+    if (parts.length >= 3) {
+      var decoded = decode64(parts.slice(1).join(':'));
+      if (decoded && decoded.username && decoded.password) {
+        var un = decoded.username, pw = decoded.password, nm = decoded.name || 'Resident';
 
-  await ensureDBLoaded();
+        // Save this user into local DB so they can login
+        ensureDBLoaded().then(function() {
+          if (!db.residentUsers) db.residentUsers = [];
+          var existing = db.residentUsers.find(function(u) { return u.username === un; });
+          if (!existing) {
+            db.residentUsers.push({
+              id: 'RU-' + Date.now().toString(36).toUpperCase(),
+              name: nm, sport: decoded.sport || '', mobile: decoded.mobile || '',
+              username: un, password: pw, status: 'active',
+              approvedAt: new Date().toISOString(), approvedBy: 'Warden',
+              ticketId: decoded.ticketId || ''
+            });
+            saveDB();
+          }
+        });
 
-  btn.innerHTML = '<i class="ti ti-search"></i> Look Up Ticket';
-  btn.style.pointerEvents = '';
+        result.innerHTML = [
+          '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:20px;text-align:center">',
+          '<div style="font-size:32px;margin-bottom:8px">&#9989;</div>',
+          '<div style="font-weight:900;font-size:15px;color:#166534;margin-bottom:4px">Account Approved!</div>',
+          '<div style="font-size:11px;color:#16a34a;margin-bottom:16px">Welcome ' + nm + '! Your login credentials:</div>',
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">',
+          '<div style="background:white;border-radius:10px;padding:14px;border:1.5px solid #86efac">',
+          '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">USERNAME</div>',
+          '<div style="font-size:18px;font-weight:900;font-family:monospace;color:#0a1628">' + un + '</div></div>',
+          '<div style="background:white;border-radius:10px;padding:14px;border:1.5px solid #86efac">',
+          '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">PASSWORD</div>',
+          '<div style="font-size:18px;font-weight:900;font-family:monospace;color:#0a1628">' + pw + '</div></div></div>',
+          '<button class="btn-login" style="margin-bottom:8px" id="autoFillSignIn">&#128274; Sign In Now</button>',
+          '<div style="font-size:10px;color:#92400e;background:#fef9c3;border-radius:8px;padding:8px;margin-top:8px">Save your username and password before closing this page!</div>',
+          '</div>'
+        ].join('');
 
-  var req = (db.registrationRequests || []).find(function(r) { return r.id === input; });
-
-  if (!result) return;
-  result.style.display = 'block';
-
-  if (!req) {
-    result.innerHTML = '<div style="background:#fff1f2;border:1.5px solid #fca5a5;border-radius:12px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:8px">&#10060;</div><div style="font-weight:800;font-size:13px;color:#991b1b">Ticket Not Found</div><div style="font-size:11px;color:#dc2626;margin-top:6px">Check the ticket ID and try again. If you just registered, the warden may not have imported your code yet.</div></div>';
+        document.getElementById('autoFillSignIn').onclick = function() {
+          document.getElementById('lu').value = un;
+          document.getElementById('lp').value = pw;
+          switchLoginTab('signin');
+          setTimeout(doLogin, 100);
+        };
+        return;
+      }
+    }
+    result.innerHTML = '<div style="background:#fff1f2;border:1.5px solid #fca5a5;border-radius:12px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:8px">&#10060;</div><div style="font-weight:800;font-size:13px;color:#991b1b">Invalid Code</div><div style="font-size:11px;color:#dc2626;margin-top:6px">Make sure you copied the full Credential Code from the warden.</div></div>';
     return;
   }
 
-  if (req.status === 'pending') {
-    result.innerHTML = '<div style="background:#fef9c3;border:1.5px solid #fcd34d;border-radius:12px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:8px">&#9203;</div><div style="font-weight:800;font-size:13px;color:#92400e">Awaiting Approval</div><div style="font-size:11px;color:#a16207;margin-top:6px">Your registration is pending warden approval.</div><div style="margin-top:10px;padding:8px;background:white;border-radius:8px;font-size:11px;color:#475569"><b>' + req.name + '</b> &middot; ' + req.sport + '<br>Submitted: ' + new Date(req.submittedAt).toLocaleDateString('en-IN') + '</div></div>';
-    return;
-  }
-
-  if (req.status === 'rejected') {
-    result.innerHTML = '<div style="background:#fff1f2;border:1.5px solid #fca5a5;border-radius:12px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:8px">&#10060;</div><div style="font-weight:800;font-size:13px;color:#991b1b">Request Rejected</div><div style="font-size:11px;color:#dc2626;margin-top:6px">Contact the warden for details.</div></div>';
-    return;
-  }
-
-  if (req.status === 'approved') {
-    var user = (db.residentUsers || []).find(function(u) { return u.ticketId === req.id; });
-    if (user && user.status === 'banned') {
-      result.innerHTML = '<div style="background:#fff1f2;border:1.5px solid #fca5a5;border-radius:12px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:8px">&#128683;</div><div style="font-weight:800;font-size:13px;color:#991b1b">Account Suspended</div><div style="font-size:11px;color:#dc2626;margin-top:6px">Contact the warden.</div></div>';
+  // ── Case 2: Ticket ID lookup (check local DB status)
+  var ticketId = input.toUpperCase();
+  ensureDBLoaded().then(function() {
+    var req = (db.registrationRequests || []).find(function(r) { return r.id === ticketId; });
+    if (!req) {
+      result.innerHTML = '<div style="background:#fff1f2;border:1.5px solid #fca5a5;border-radius:12px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:8px">&#10060;</div><div style="font-weight:800;font-size:13px;color:#991b1b">Ticket Not Found</div><div style="font-size:11px;color:#dc2626;margin-top:6px">This ticket ID was not found on this device. If you registered on a different device, wait for the warden to send you the Credential Code directly.</div></div>';
       return;
     }
-    if (user) {
-      var un = user.username, pw = user.password;
-      result.innerHTML = [
-        '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:20px;text-align:center">',
-        '<div style="font-size:28px;margin-bottom:8px">&#9989;</div>',
-        '<div style="font-weight:900;font-size:14px;color:#166534;margin-bottom:4px">Account Approved!</div>',
-        '<div style="font-size:11px;color:#16a34a;margin-bottom:14px">Welcome ' + req.name + '! Your login credentials:</div>',
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">',
-        '<div style="background:white;border-radius:10px;padding:12px;border:1px solid #86efac">',
-        '<div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px">USERNAME</div>',
-        '<div style="font-size:15px;font-weight:900;font-family:monospace;color:#0a1628">' + un + '</div></div>',
-        '<div style="background:white;border-radius:10px;padding:12px;border:1px solid #86efac">',
-        '<div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px">PASSWORD</div>',
-        '<div style="font-size:15px;font-weight:900;font-family:monospace;color:#0a1628">' + pw + '</div></div></div>',
-        '<div style="font-size:10px;background:#fef9c3;border-radius:8px;padding:8px;margin-bottom:12px;color:#92400e">Save these credentials before closing!</div>',
-        '<button class="btn-login" id="autoFillBtn">&#128274; Auto-Fill &amp; Sign In</button>',
-        '</div>'
-      ].join('');
-      document.getElementById('autoFillBtn').onclick = function() {
-        document.getElementById('lu').value = un;
-        document.getElementById('lp').value = pw;
-        switchLoginTab('signin');
-      };
+    if (req.status === 'pending') {
+      result.innerHTML = '<div style="background:#fef9c3;border:1.5px solid #fcd34d;border-radius:12px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:8px">&#9203;</div><div style="font-weight:800;font-size:13px;color:#92400e">Awaiting Approval</div><div style="font-size:11px;color:#a16207;margin-top:6px">The warden has not approved your request yet.</div><div style="margin-top:10px;padding:8px;background:white;border-radius:8px;font-size:11px;color:#475569"><b>' + req.name + '</b> &middot; ' + req.sport + '</div><div style="margin-top:10px;font-size:10px;color:#92400e;background:#fffbeb;border-radius:8px;padding:8px">Once approved, the warden will send you a <b>Credential Code</b>. Paste that here to login.</div></div>';
       return;
     }
-  }
-
-  result.innerHTML = '<div style="background:#fef9c3;border:1.5px solid #fcd34d;border-radius:12px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:8px">&#9203;</div><div style="font-weight:800;font-size:13px;color:#92400e">Processing</div><div style="font-size:11px;color:#a16207;margin-top:6px">Your request has been approved but account setup is in progress. Try again in a moment.</div></div>';
+    if (req.status === 'rejected') {
+      result.innerHTML = '<div style="background:#fff1f2;border:1.5px solid #fca5a5;border-radius:12px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:8px">&#10060;</div><div style="font-weight:800;font-size:13px;color:#991b1b">Request Rejected</div><div style="font-size:11px;color:#dc2626;margin-top:6px">Contact the warden for details.</div></div>';
+      return;
+    }
+    if (req.status === 'approved') {
+      var user = (db.residentUsers || []).find(function(u) { return u.ticketId === req.id; });
+      if (user && user.status !== 'banned') {
+        var un2 = user.username, pw2 = user.password;
+        result.innerHTML = '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:20px;text-align:center"><div style="font-size:28px;margin-bottom:8px">&#9989;</div><div style="font-weight:900;font-size:14px;color:#166534;margin-bottom:14px">Account Approved!</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"><div style="background:white;border-radius:10px;padding:12px;border:1px solid #86efac"><div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px">USERNAME</div><div style="font-size:15px;font-weight:900;font-family:monospace;color:#0a1628">' + un2 + '</div></div><div style="background:white;border-radius:10px;padding:12px;border:1px solid #86efac"><div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px">PASSWORD</div><div style="font-size:15px;font-weight:900;font-family:monospace;color:#0a1628">' + pw2 + '</div></div></div><button class="btn-login" id="autoFill2">Sign In Now</button></div>';
+        document.getElementById('autoFill2').onclick = function() {
+          document.getElementById('lu').value = un2;
+          document.getElementById('lp').value = pw2;
+          switchLoginTab('signin');
+          setTimeout(doLogin, 100);
+        };
+        return;
+      }
+      result.innerHTML = '<div style="background:#fef9c3;border:1.5px solid #fcd34d;border-radius:12px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:8px">&#9203;</div><div style="font-weight:800;font-size:13px;color:#92400e">Approved — Waiting for warden to send Credential Code</div><div style="font-size:11px;color:#a16207;margin-top:6px">Your request was approved on the warden device. Ask the warden to send you the Credential Code and paste it here.</div></div>';
+    }
+  });
 }
 
-// ── IMPORT TICKET CODE (warden side) ─────────────────────────────────────
-async function importTicketCode() {
+// ── IMPORT TICKET CODE (warden pastes resident code) ─────────────────────
+function importTicketCode() {
   var raw = (document.getElementById('importTicketCode').value || '').trim();
   if (!raw) { toast('Paste the registration code first', 'error'); return; }
 
-  await ensureDBLoaded();
-  if (!db.registrationRequests) db.registrationRequests = [];
-
-  if (!raw.includes(':')) {
-    toast('Paste the FULL code (starts with REQ-....:eyJ...). Not just the ticket ID.', 'error');
-    return;
+  if (!raw.startsWith('REG:')) {
+    toast('Invalid code. Must start with REG:', 'error'); return;
   }
 
-  var colonIdx = raw.indexOf(':');
-  var ticketId = raw.slice(0, colonIdx).toUpperCase().trim();
-  var encoded  = raw.slice(colonIdx + 1).trim();
+  var parts = raw.split(':');
+  if (parts.length < 3) { toast('Code is incomplete. Ask resident to copy the full code.', 'error'); return; }
 
-  // Check duplicate
+  var ticketId = parts[1].toUpperCase();
+  var encoded  = parts.slice(2).join(':');
+  var info = decode64(encoded);
+
+  if (!info || !info.name) {
+    toast('Could not decode the registration code.', 'error'); return;
+  }
+
+  if (!db.registrationRequests) db.registrationRequests = [];
   if (db.registrationRequests.find(function(r) { return r.id === ticketId; })) {
-    toast('Ticket ' + ticketId + ' already in the queue', 'error');
+    toast('Ticket ' + ticketId + ' is already in the queue', 'error');
     document.getElementById('importTicketCode').value = '';
     return;
   }
 
-  var info;
-  try {
-    info = JSON.parse(decodeURIComponent(escape(atob(encoded))));
-  } catch(e) {
-    toast('Invalid code. Ask the resident to copy it again exactly.', 'error');
-    return;
-  }
-
   var req = {
-    id: info.id || ticketId,
-    name: info.name || 'Unknown',
-    sport: info.sport || '',
-    mobile: info.mobile || '',
-    saiId: info.saiId || '',
-    govIdType: info.govIdType || 'aadhaar',
-    govIdData: null,
-    govIdFileName: null,
-    status: 'pending',
-    submittedAt: info.submittedAt || new Date().toISOString(),
+    id: ticketId, name: info.name, sport: info.sport || '', mobile: info.mobile || '',
+    saiId: info.saiId || '', govIdType: info.govIdType || 'aadhaar',
+    govIdData: null, govIdFileName: null,
+    status: 'pending', submittedAt: info.submittedAt || new Date().toISOString(),
     reviewedBy: null, reviewedAt: null,
     generatedUsername: null, generatedPassword: null
   };
 
   db.registrationRequests.unshift(req);
-  await saveDB();
+  saveDB();
   updateBadges();
   document.getElementById('importTicketCode').value = '';
   switchUMTab('pending');
   renderUserMgmt();
-  toast(req.name + ' added to pending queue — review and approve below!');
+  toast(info.name + ' added to pending requests!');
 }
 
-// ── USER MANAGEMENT PAGE ──────────────────────────────────────────────────
+// ── USER MANAGEMENT ───────────────────────────────────────────────────────
 var umCurrentTab = 'pending';
+var _umPendingIds = [];
+var _umActiveIds  = [];
+var _umBannedIds  = [];
 
-// Global handler functions called from onclick - no escaping issues
 window._um_approve = function(id) { approveRequest(id); };
 window._um_reject  = function(id) { rejectRequest(id); };
 window._um_ban     = function(id) { banUser(id); };
 window._um_unban   = function(id) { unbanUser(id); };
 window._um_remove  = function(id) { removeUser(id); };
 window._um_creds   = function(id) { showCredentials(id); };
-
-// Store pending IDs so buttons can look them up by index (no string escaping needed)
-var _umPendingIds  = [];
-var _umActiveIds   = [];
-var _umBannedIds   = [];
 
 function renderUserMgmt() {
   if (!db) return;
@@ -5359,46 +5345,46 @@ function switchUMTab(tab) {
   if (tab === 'pending') {
     var reqs = (db.registrationRequests || []).filter(function(r) { return r.status === 'pending'; });
     _umPendingIds = reqs.map(function(r) { return r.id; });
-    if (reqs.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)"><i class="ti ti-inbox" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i><p style="font-size:12px">No pending requests.<br><span style="font-size:10px">Residents share their Registration Code &rarr; paste it above to import.</span></p></div>';
+    if (!reqs.length) {
+      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)"><i class="ti ti-inbox" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i><p style="font-size:12px">No pending requests.<br><span style="font-size:10px">Paste a Registration Code above to import one.</span></p></div>';
       return;
     }
-    el.innerHTML = reqs.map(function(r, idx) {
-      var initials = r.name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
+    el.innerHTML = reqs.map(function(r, i) {
+      var ini = r.name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
       return '<div class="um-card" style="flex-wrap:wrap;align-items:flex-start">'
         + '<div style="display:flex;align-items:center;gap:12px;width:100%">'
-        + '<div class="um-av" style="background:#f59e0b">' + initials + '</div>'
+        + '<div class="um-av" style="background:#f59e0b;font-size:14px">' + ini + '</div>'
         + '<div style="flex:1;min-width:0">'
         + '<div class="um-name">' + r.name + '</div>'
-        + '<div class="um-meta">' + r.sport + ' &middot; &#128241; ' + r.mobile + (r.saiId ? ' &middot; ID: ' + r.saiId : '') + '</div>'
-        + '<div class="um-meta" style="margin-top:2px">Ticket: <b style="font-family:monospace">' + r.id + '</b> &middot; ' + new Date(r.submittedAt).toLocaleDateString('en-IN') + '</div>'
+        + '<div class="um-meta">' + r.sport + (r.mobile ? ' &middot; &#128241; ' + r.mobile : '') + (r.saiId ? ' &middot; ' + r.saiId : '') + '</div>'
+        + '<div class="um-meta" style="margin-top:2px;font-family:monospace;font-size:10px;color:var(--accent)">' + r.id + '</div>'
         + '</div><span class="badge-pending">Pending</span></div>'
         + '<div style="display:flex;gap:6px;margin-top:10px;margin-left:auto">'
-        + '<button class="btn btn-xs" id="approve-btn-' + idx + '" style="background:#dcfce7;color:#166534;border:none" onclick="_um_approve(_umPendingIds[' + idx + '])"><i class="ti ti-check"></i> Approve</button>'
-        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#991b1b;border:none" onclick="_um_reject(_umPendingIds[' + idx + '])"><i class="ti ti-x"></i> Reject</button>' : '')
+        + '<button class="btn btn-sm" id="approve-btn-' + i + '" style="background:#16a34a;color:white;border:none;font-weight:700" onclick="_um_approve(_umPendingIds[' + i + '])"><i class="ti ti-check"></i> Approve &amp; Generate Login</button>'
+        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#991b1b;border:none" onclick="_um_reject(_umPendingIds[' + i + '])"><i class="ti ti-x"></i> Reject</button>' : '')
         + '</div></div>';
     }).join('');
 
   } else if (tab === 'active') {
     var users = (db.residentUsers || []).filter(function(u) { return u.status === 'active'; });
     _umActiveIds = users.map(function(u) { return u.id; });
-    if (users.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)"><i class="ti ti-users" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i><p style="font-size:12px">No active resident accounts yet.</p></div>';
+    if (!users.length) {
+      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)"><i class="ti ti-users" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i><p style="font-size:12px">No active accounts yet.</p></div>';
       return;
     }
-    el.innerHTML = users.map(function(u, idx) {
-      var initials = u.name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
+    el.innerHTML = users.map(function(u, i) {
+      var ini = u.name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
       return '<div class="um-card">'
-        + '<div class="um-av">' + initials + '</div>'
+        + '<div class="um-av">' + ini + '</div>'
         + '<div style="flex:1;min-width:0">'
         + '<div class="um-name">' + u.name + '</div>'
         + '<div class="um-meta">' + u.sport + ' &middot; <b style="font-family:monospace">' + u.username + '</b></div>'
-        + '<div class="um-meta" style="margin-top:2px">Approved: ' + new Date(u.approvedAt).toLocaleDateString('en-IN') + ' by ' + u.approvedBy + '</div>'
+        + '<div class="um-meta">Approved ' + new Date(u.approvedAt).toLocaleDateString('en-IN') + ' by ' + u.approvedBy + '</div>'
         + '</div><span class="badge-approved">Active</span>'
         + '<div class="um-actions">'
-        + (isSA ? '<button class="btn btn-xs" style="background:#fef9c3;color:#854d0e;border:none" onclick="_um_creds(_umActiveIds[' + idx + '])"><i class="ti ti-key"></i> Creds</button>' : '')
-        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#991b1b;border:none" onclick="_um_ban(_umActiveIds[' + idx + '])"><i class="ti ti-ban"></i> Ban</button>' : '')
-        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#7f1d1d;border:none" onclick="_um_remove(_umActiveIds[' + idx + '])"><i class="ti ti-trash"></i></button>' : '')
+        + (isSA ? '<button class="btn btn-xs" style="background:#fef9c3;color:#854d0e;border:none" onclick="_um_creds(_umActiveIds[' + i + '])"><i class="ti ti-key"></i> Creds</button>' : '')
+        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#991b1b;border:none" onclick="_um_ban(_umActiveIds[' + i + '])"><i class="ti ti-ban"></i> Ban</button>' : '')
+        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#7f1d1d;border:none" onclick="_um_remove(_umActiveIds[' + i + '])"><i class="ti ti-trash"></i></button>' : '')
         + '</div></div>';
     }).join('');
 
@@ -5406,42 +5392,36 @@ function switchUMTab(tab) {
     if (!isSA) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);font-size:12px">Only Super Admin can view banned users.</div>'; return; }
     var banned = (db.residentUsers || []).filter(function(u) { return u.status === 'banned'; });
     _umBannedIds = banned.map(function(u) { return u.id; });
-    if (banned.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)"><i class="ti ti-ban" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i><p style="font-size:12px">No banned users.</p></div>';
+    if (!banned.length) {
+      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)"><i class="ti ti-ban" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i><p>No banned users.</p></div>';
       return;
     }
-    el.innerHTML = banned.map(function(u, idx) {
-      var initials = u.name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
+    el.innerHTML = banned.map(function(u, i) {
+      var ini = u.name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
       return '<div class="um-card" style="opacity:.8">'
-        + '<div class="um-av" style="background:#991b1b">' + initials + '</div>'
-        + '<div style="flex:1;min-width:0">'
-        + '<div class="um-name">' + u.name + '</div>'
-        + '<div class="um-meta">' + u.sport + ' &middot; <b style="font-family:monospace">' + u.username + '</b></div>'
-        + '</div><span class="badge-banned">Banned</span>'
+        + '<div class="um-av" style="background:#991b1b">' + ini + '</div>'
+        + '<div style="flex:1;min-width:0"><div class="um-name">' + u.name + '</div>'
+        + '<div class="um-meta"><b style="font-family:monospace">' + u.username + '</b></div></div>'
+        + '<span class="badge-banned">Banned</span>'
         + '<div class="um-actions">'
-        + '<button class="btn btn-xs" style="background:#dcfce7;color:#166534;border:none" onclick="_um_unban(_umBannedIds[' + idx + '])"><i class="ti ti-check"></i> Unban</button>'
-        + '<button class="btn btn-xs" style="background:#fee2e2;color:#7f1d1d;border:none" onclick="_um_remove(_umBannedIds[' + idx + '])"><i class="ti ti-trash"></i></button>'
+        + '<button class="btn btn-xs" style="background:#dcfce7;color:#166534;border:none" onclick="_um_unban(_umBannedIds[' + i + '])"><i class="ti ti-check"></i> Unban</button>'
+        + '<button class="btn btn-xs" style="background:#fee2e2;color:#7f1d1d;border:none" onclick="_um_remove(_umBannedIds[' + i + '])"><i class="ti ti-trash"></i></button>'
         + '</div></div>';
     }).join('');
   }
 }
 
-// ── APPROVE / REJECT / BAN / UNBAN / REMOVE ──────────────────────────────
+// ── APPROVE — generates creds AND a Credential Code for the resident ──────
 function approveRequest(reqId) {
   var req = (db.registrationRequests || []).find(function(r) { return r.id === reqId; });
   if (!req) { toast('Request not found', 'error'); return; }
 
-  // Disable approve buttons while processing
-  document.querySelectorAll('[id^="approve-btn-"]').forEach(function(b) {
-    b.disabled = true;
-    b.innerHTML = '<i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i> Approving...';
-  });
+  var btn = document.getElementById('approve-btn-' + _umPendingIds.indexOf(reqId));
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i> Approving...'; }
 
-  // Generate credentials locally — instant, no external API needed
+  // Generate credentials instantly
   var username = generateUsername(req.name);
   var password = generatePassword();
-
-  // Ensure unique username
   var existing = (db.residentUsers || []).map(function(u) { return u.username; });
   while (existing.indexOf(username) !== -1) {
     username = username.replace(/\d+$/, '') + Math.floor(100 + Math.random() * 900);
@@ -5450,12 +5430,10 @@ function approveRequest(reqId) {
   var userId = 'RU-' + Date.now().toString(36).toUpperCase();
   if (!db.residentUsers) db.residentUsers = [];
   db.residentUsers.push({
-    id: userId, name: req.name, sport: req.sport, mobile: req.mobile,
-    saiId: req.saiId, username: username, password: password,
-    status: 'active',
-    approvedAt: new Date().toISOString(),
-    approvedBy: currentUser.name,
-    ticketId: reqId
+    id: userId, name: req.name, sport: req.sport, mobile: req.mobile || '',
+    saiId: req.saiId || '', username: username, password: password,
+    status: 'active', approvedAt: new Date().toISOString(),
+    approvedBy: currentUser.name, ticketId: reqId
   });
 
   req.status = 'approved';
@@ -5467,37 +5445,48 @@ function approveRequest(reqId) {
   saveDB();
   updateBadges();
   renderUserMgmt();
-  toast(req.name + ' approved!');
+
+  // Build Credential Code — resident pastes this to get their login
+  var credData = { username: username, password: password, name: req.name, sport: req.sport, mobile: req.mobile || '', ticketId: reqId };
+  var credCode = 'CRED:' + encode64(credData);
+
   openModal('Account Approved \u2713',
-    '<div style="text-align:center;margin-bottom:16px">'
+    '<div style="text-align:center;margin-bottom:14px">'
     + '<i class="ti ti-circle-check" style="font-size:44px;color:#16a34a"></i>'
-    + '<div style="font-weight:800;font-size:15px;margin-top:8px">' + req.name + '</div>'
+    + '<div style="font-weight:900;font-size:16px;margin-top:8px">' + req.name + '</div>'
     + '<div style="font-size:11px;color:var(--text3)">' + req.sport + '</div></div>'
-    + '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:18px;text-align:center">'
-    + '<div style="font-size:10px;color:#166534;margin-bottom:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">&#x2728; Auto-Generated Login Credentials</div>'
-    + '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:12px">'
-    + '<div style="background:white;border-radius:10px;padding:12px 20px;border:1px solid #86efac;min-width:120px"><div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">USERNAME</div><div style="font-size:18px;font-weight:900;font-family:monospace;color:#0a1628">' + username + '</div></div>'
-    + '<div style="background:white;border-radius:10px;padding:12px 20px;border:1px solid #86efac;min-width:120px"><div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">PASSWORD</div><div style="font-size:18px;font-weight:900;font-family:monospace;color:#0a1628">' + password + '</div></div>'
+    + '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:16px;margin-bottom:14px">'
+    + '<div style="font-size:10px;color:#166534;font-weight:700;text-transform:uppercase;margin-bottom:10px">&#x2728; Login Credentials Generated</div>'
+    + '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:10px">'
+    + '<div style="background:white;border-radius:10px;padding:12px 20px;border:1.5px solid #86efac;text-align:center">'
+    + '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px">USERNAME</div>'
+    + '<div style="font-size:18px;font-weight:900;font-family:monospace;color:#0a1628">' + username + '</div></div>'
+    + '<div style="background:white;border-radius:10px;padding:12px 20px;border:1.5px solid #86efac;text-align:center">'
+    + '<div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px">PASSWORD</div>'
+    + '<div style="font-size:18px;font-weight:900;font-family:monospace;color:#0a1628">' + password + '</div></div>'
+    + '</div></div>'
+    + '<div style="background:#1e3a8a;border-radius:12px;padding:14px;margin-bottom:10px">'
+    + '<div style="color:rgba(255,255,255,.7);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:6px">&#128204; CREDENTIAL CODE — SEND TO RESIDENT</div>'
+    + '<div id="credCodeBox" style="background:rgba(255,255,255,.1);border-radius:8px;padding:10px;font-family:monospace;font-size:8px;color:#93c5fd;word-break:break-all;line-height:1.6;max-height:60px;overflow-y:auto">' + credCode + '</div>'
     + '</div>'
-    + '<div style="font-size:10px;color:#92400e;background:#fef9c3;border-radius:8px;padding:8px"><i class="ti ti-info-circle"></i> Share these credentials with <b>' + req.name + '</b>. They can also retrieve them via the <b>My Ticket</b> tab on the login page.</div>'
-    + '</div>',
+    + '<button class="btn btn-accent" style="width:100%;justify-content:center;margin-bottom:8px" onclick="var el=document.getElementById(\'credCodeBox\');copyText(el.textContent,\'Credential code\')">'
+    + '<i class="ti ti-copy"></i> Copy Credential Code (send to resident on WhatsApp)'
+    + '</button>'
+    + '<div style="font-size:10px;color:#64748b;text-align:center">Resident pastes this code in the <b>My Ticket</b> tab to login instantly.</div>',
     '<button class="btn btn-primary btn-sm" onclick="closeModal()"><i class="ti ti-check"></i> Done</button>'
   );
 }
-
 
 function rejectRequest(reqId) {
   if (!confirm('Reject this registration request?')) return;
   var req = (db.registrationRequests || []).find(function(r) { return r.id === reqId; });
   if (!req) return;
-  req.status = 'rejected';
-  req.reviewedBy = currentUser.name;
-  req.reviewedAt = new Date().toISOString();
+  req.status = 'rejected'; req.reviewedBy = currentUser.name; req.reviewedAt = new Date().toISOString();
   saveDB(); updateBadges(); renderUserMgmt(); toast('Request rejected.');
 }
 
 function banUser(userId) {
-  if (!confirm('Ban this user?')) return;
+  if (!confirm('Ban this user? They will not be able to login.')) return;
   var u = (db.residentUsers || []).find(function(u) { return u.id === userId; });
   if (!u) return;
   u.status = 'banned'; saveDB(); renderUserMgmt(); toast('User banned.');
@@ -5518,38 +5507,23 @@ function removeUser(userId) {
 function showCredentials(userId) {
   var u = (db.residentUsers || []).find(function(u) { return u.id === userId; });
   if (!u) return;
+  var credData = { username: u.username, password: u.password, name: u.name, sport: u.sport, mobile: u.mobile || '', ticketId: u.ticketId || '' };
+  var credCode = 'CRED:' + encode64(credData);
   openModal('Credentials \u2014 ' + u.name,
-    '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:16px;text-align:center">'
-    + '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">'
-    + '<div style="background:white;border-radius:8px;padding:10px 18px;border:1px solid #86efac"><div style="font-size:9px;color:var(--text3)">USERNAME</div><div style="font-size:16px;font-weight:900;font-family:monospace;color:var(--navy)">' + u.username + '</div></div>'
-    + '<div style="background:white;border-radius:8px;padding:10px 18px;border:1px solid #86efac"><div style="font-size:9px;color:var(--text3)">PASSWORD</div><div style="font-size:16px;font-weight:900;font-family:monospace;color:var(--navy)">' + u.password + '</div></div>'
-    + '</div></div>',
+    '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:16px;margin-bottom:12px">'
+    + '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:10px">'
+    + '<div style="background:white;border-radius:8px;padding:10px 18px;border:1px solid #86efac;text-align:center"><div style="font-size:9px;color:var(--text3)">USERNAME</div><div style="font-size:16px;font-weight:900;font-family:monospace;color:var(--navy)">' + u.username + '</div></div>'
+    + '<div style="background:white;border-radius:8px;padding:10px 18px;border:1px solid #86efac;text-align:center"><div style="font-size:9px;color:var(--text3)">PASSWORD</div><div style="font-size:16px;font-weight:900;font-family:monospace;color:var(--navy)">' + u.password + '</div></div>'
+    + '</div></div>'
+    + '<div style="background:#1e3a8a;border-radius:10px;padding:12px;margin-bottom:10px">'
+    + '<div style="color:rgba(255,255,255,.6);font-size:9px;font-weight:700;margin-bottom:6px">CREDENTIAL CODE</div>'
+    + '<div id="credCodeBox2" style="background:rgba(255,255,255,.1);border-radius:6px;padding:8px;font-family:monospace;font-size:8px;color:#93c5fd;word-break:break-all;line-height:1.6">' + credCode + '</div></div>'
+    + '<button class="btn btn-accent btn-sm" style="width:100%;justify-content:center" onclick="var el=document.getElementById(\'credCodeBox2\');copyText(el.textContent,\'Credential code\')"><i class="ti ti-copy"></i> Copy Credential Code</button>',
     '<button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button>'
   );
 }
 
-function viewIdDoc(reqId) {
-  var r = (db.registrationRequests || []).find(function(x) { return x.id === reqId; });
-  if (!r || !r.govIdData) return;
-  var labels = {aadhaar:'Aadhaar Card', pan:'PAN Card', passport:'Passport', voter:'Voter ID', driving:'Driving Licence'};
-  var typeLabel = labels[r.govIdType] || r.govIdType || 'ID Document';
-  var bodyHtml;
-  if (r.govIdData.startsWith('data:image')) {
-    var img = document.createElement('img');
-    img.src = r.govIdData;
-    img.style.cssText = 'max-width:100%;max-height:420px;border-radius:10px;border:1.5px solid #e2e8f2;display:block;margin:0 auto';
-    var wrap = document.createElement('div');
-    wrap.style.textAlign = 'center';
-    wrap.appendChild(img);
-    bodyHtml = wrap.outerHTML;
-  } else {
-    var fn = r.govIdFileName || 'document.pdf';
-    bodyHtml = '<div style="text-align:center;padding:24px;color:#64748b"><i class="ti ti-file-type-pdf" style="font-size:48px;color:#ef4444;display:block;margin-bottom:10px"></i><div style="font-size:12px;font-weight:700">' + fn + '</div></div>';
-  }
-  openModal('Government ID \u2014 ' + r.name + ' (' + typeLabel + ')', bodyHtml, '<button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button>');
-}
-
-// Badge counter for pending requests
+// ── BADGES ────────────────────────────────────────────────────────────────
 var _origUpdateBadges = typeof updateBadges === 'function' ? updateBadges : null;
 function updateBadges() {
   if (_origUpdateBadges) _origUpdateBadges();
@@ -5561,7 +5535,7 @@ function updateBadges() {
   if (tabBadge) tabBadge.textContent = pending || '';
 }
 
-// ID upload helpers
+// ── ID UPLOAD HELPERS ─────────────────────────────────────────────────────
 window._regIdType = 'aadhaar';
 window._regIdData = null;
 window._regIdFileName = null;
@@ -5580,16 +5554,16 @@ function previewRegId(input) {
   var reader = new FileReader();
   reader.onload = function(e) {
     window._regIdData = e.target.result;
-    var preview = document.getElementById('regIdPreview');
+    var preview   = document.getElementById('regIdPreview');
     var previewImg = document.getElementById('regIdPreviewImg');
     var fileNameEl = document.getElementById('regIdFileName');
-    var uploadBox = document.getElementById('regIdUploadBox');
+    var uploadBox  = document.getElementById('regIdUploadBox');
     if (file.type.startsWith('image/')) {
       if (previewImg) previewImg.src = e.target.result;
-      if (preview) preview.style.display = 'block';
+      if (preview)   preview.style.display = 'block';
       if (uploadBox) uploadBox.style.display = 'none';
     } else {
-      if (preview) preview.style.display = 'none';
+      if (preview)  preview.style.display = 'none';
       if (uploadBox) { uploadBox.style.display = 'block'; uploadBox.style.borderColor = '#16a34a'; uploadBox.style.background = '#f0fdf4'; }
       if (fileNameEl) fileNameEl.innerHTML = '<i class="ti ti-file-type-pdf" style="color:#ef4444"></i> ' + file.name + ' \u2014 uploaded \u2713';
     }
@@ -5598,16 +5572,33 @@ function previewRegId(input) {
 }
 
 function removeRegId() {
-  window._regIdData = null;
-  window._regIdFileName = null;
-  var preview = document.getElementById('regIdPreview');
-  var uploadBox = document.getElementById('regIdUploadBox');
+  window._regIdData = null; window._regIdFileName = null;
+  var preview   = document.getElementById('regIdPreview');
+  var uploadBox  = document.getElementById('regIdUploadBox');
   var fileNameEl = document.getElementById('regIdFileName');
-  var fileInput = document.getElementById('regIdFile');
-  if (preview) preview.style.display = 'none';
+  var fileInput  = document.getElementById('regIdFile');
+  if (preview)  preview.style.display = 'none';
   if (uploadBox) { uploadBox.style.display = 'block'; uploadBox.style.borderColor = ''; uploadBox.style.background = ''; }
   if (fileNameEl) fileNameEl.textContent = '';
   if (fileInput) fileInput.value = '';
+}
+
+function viewIdDoc(reqId) {
+  var r = (db.registrationRequests || []).find(function(x) { return x.id === reqId; });
+  if (!r || !r.govIdData) return;
+  var labels = {aadhaar:'Aadhaar Card', pan:'PAN Card', passport:'Passport', voter:'Voter ID', driving:'Driving Licence'};
+  var typeLabel = labels[r.govIdType] || r.govIdType || 'ID Document';
+  var bodyHtml;
+  if (r.govIdData.startsWith('data:image')) {
+    var img = document.createElement('img');
+    img.src = r.govIdData;
+    img.style.cssText = 'max-width:100%;max-height:420px;border-radius:10px;border:1.5px solid #e2e8f2;display:block;margin:0 auto';
+    var wrap = document.createElement('div'); wrap.style.textAlign = 'center'; wrap.appendChild(img);
+    bodyHtml = wrap.outerHTML;
+  } else {
+    bodyHtml = '<div style="text-align:center;padding:24px;color:#64748b"><i class="ti ti-file-type-pdf" style="font-size:48px;color:#ef4444;display:block;margin-bottom:10px"></i><div style="font-size:12px;font-weight:700">' + (r.govIdFileName || 'document.pdf') + '</div></div>';
+  }
+  openModal('Government ID \u2014 ' + r.name + ' (' + typeLabel + ')', bodyHtml, '<button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button>');
 }
 
 
