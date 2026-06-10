@@ -1054,6 +1054,20 @@ a, button, [onclick] { -webkit-tap-highlight-color: transparent; }
             <div class="page-sub">Manage resident accounts, registrations and access</div>
           </div>
         </div>
+
+        <!-- IMPORT TICKET CODE BOX -->
+        <div style="background:linear-gradient(135deg,#1e3a8a,#1a3a6b);border-radius:14px;padding:18px 20px;margin-bottom:16px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:220px">
+            <div style="color:rgba(255,255,255,.7);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px"><i class="ti ti-ticket"></i> Import Resident Registration</div>
+            <div style="color:white;font-size:13px;font-weight:800;margin-bottom:8px">Paste Registration Code from Resident</div>
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:10px">The resident shares their code via WhatsApp. Paste it here to add them to the pending queue.</div>
+            <textarea id="importTicketCode" placeholder="Paste full registration code here (REQ-XXXXXX:eyJ...)" style="width:100%;height:64px;border-radius:8px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:white;padding:8px 10px;font-family:monospace;font-size:10px;resize:none;outline:none"></textarea>
+          </div>
+          <button class="btn btn-accent" onclick="importTicketCode()" style="flex-shrink:0;height:40px;padding:0 20px;font-size:12px;font-weight:700">
+            <i class="ti ti-download"></i> Import &amp; Add to Queue
+          </button>
+        </div>
+
         <div class="tab-bar">
           <button class="tab-btn active" id="umTab-pending" onclick="switchUMTab('pending')"><i class="ti ti-clock"></i> Pending Requests <span id="umPendingBadge" style="background:#f59e0b;color:white;border-radius:10px;padding:1px 7px;font-size:9px;margin-left:4px"></span></button>
           <button class="tab-btn" id="umTab-active" onclick="switchUMTab('active')"><i class="ti ti-check"></i> Active Users</button>
@@ -1382,90 +1396,25 @@ if (!window.storage || !_isClaudeEnv) {
 // write uses a master key embedded here (it is public app data).
 // Syncs: registrationRequests + residentUsers only.
 // ═══════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════
-// CROSS-DEVICE SYNC via GitHub API
-// Uses the same GitHub repo as a shared database.
-// data.json in the repo stores registrations + resident users.
-// Reads are public (no auth). Writes use a PAT token.
-// ═══════════════════════════════════════════════════════════
-var GH_REPO  = 'amanagarwalsports-code/sai-hostel-portal';
-var GH_FILE  = 'data.json';
-var GH_TOKEN = ''; // Set this in Settings page
-var GH_SHA   = ''; // tracks current file SHA for updates
-
-async function ghGetToken() {
-  if (GH_TOKEN) return GH_TOKEN;
-  try { GH_TOKEN = localStorage.getItem('sai_gh_token') || ''; } catch(e){}
-  return GH_TOKEN;
+function copyRegCode() {
+  var el = document.getElementById('fullCodeBox');
+  if (el && navigator.clipboard) {
+    navigator.clipboard.writeText(el.textContent).then(function(){ toast('Registration code copied!'); });
+  } else if (el) {
+    var r = document.createRange(); r.selectNode(el);
+    window.getSelection().removeAllRanges(); window.getSelection().addRange(r);
+    document.execCommand('copy'); window.getSelection().removeAllRanges();
+    toast('Registration code copied!');
+  }
 }
 
-async function syncFromCloud() {
-  try {
-    var url = 'https://api.github.com/repos/' + GH_REPO + '/contents/' + GH_FILE;
-    var r = await fetch(url, {
-      headers: {'Accept':'application/vnd.github.v3+json', 'Cache-Control':'no-cache'},
-      cache: 'no-store'
-    });
-    if (!r.ok) return false;
-    var meta = await r.json();
-    GH_SHA = meta.sha;
-    var decoded = atob(meta.content.replace(/\n/g,''));
-    var data = JSON.parse(decoded);
-    if (Array.isArray(data.registrationRequests) && data.registrationRequests.length > 0) {
-      var localReqs = db.registrationRequests || [];
-      var map = {};
-      data.registrationRequests.forEach(function(r){ map[r.id] = r; });
-      localReqs.forEach(function(r){ if(!map[r.id]) map[r.id] = r; });
-      db.registrationRequests = Object.values(map).sort(function(a,b){
-        return new Date(b.submittedAt) - new Date(a.submittedAt);
-      });
-    }
-    if (Array.isArray(data.residentUsers) && data.residentUsers.length > 0) {
-      var map2 = {};
-      data.residentUsers.forEach(function(u){ map2[u.id] = u; });
-      (db.residentUsers||[]).forEach(function(u){ if(!map2[u.id]) map2[u.id] = u; });
-      db.residentUsers = Object.values(map2);
-    }
-    return true;
-  } catch(e) { console.warn('syncFromCloud:', e.message); return false; }
-}
-
-async function syncToCloud() {
-  var token = await ghGetToken();
-  if (!token) return; // no token = read-only mode
-  try {
-    // Get current SHA if we don't have it
-    if (!GH_SHA) {
-      var r0 = await fetch('https://api.github.com/repos/' + GH_REPO + '/contents/' + GH_FILE, {
-        headers: {'Authorization':'token ' + token, 'Accept':'application/vnd.github.v3+json'}
-      });
-      if (r0.ok) { var m = await r0.json(); GH_SHA = m.sha || ''; }
-    }
-    var reqs = (db.registrationRequests||[]).map(function(r){
-      var c = Object.assign({}, r); delete c.govIdData; return c;
-    });
-    var payload = {
-      registrationRequests: reqs,
-      residentUsers: db.residentUsers || [],
-      updatedAt: new Date().toISOString()
-    };
-    var body = {
-      message: 'sync: ' + new Date().toISOString().slice(0,16),
-      content: btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2)))),
-      sha: GH_SHA
-    };
-    var r2 = await fetch('https://api.github.com/repos/' + GH_REPO + '/contents/' + GH_FILE, {
-      method: 'PUT',
-      headers: {
-        'Authorization': 'token ' + token,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-    if (r2.ok) { var res = await r2.json(); GH_SHA = res.content && res.content.sha || GH_SHA; }
-  } catch(e) { console.warn('syncToCloud:', e.message); }
-}
+// Sync stubs - no-op, localStorage only
+async function syncFromCloud() { return true; }
+async function syncToCloud() { return; }
+var GH_TOKEN = '';
+function saveGHToken(){}
+async function testGHSync(){}
+async function forceSyncNow(){}
 // ─── Key schema ──────────────────────────────────────────
 // window.storage (Claude API) = text data only, no photos
 // IndexedDB (local browser)   = Aadhaar photos (base64)
@@ -5148,13 +5097,13 @@ async function ensureDBLoaded() {
 }
 
 async function submitRegistration() {
-  const name   = document.getElementById('regName').value.trim();
-  const sport  = document.getElementById('regSport').value.trim();
-  const mobile = document.getElementById('regMobile').value.trim();
-  const saiId  = document.getElementById('regSaiId').value.trim();
-  const errEl  = document.getElementById('regErr');
-  const errMsg = document.getElementById('regErrMsg');
-  const btn    = document.getElementById('regSubmitBtn');
+  var name   = document.getElementById('regName').value.trim();
+  var sport  = document.getElementById('regSport').value.trim();
+  var mobile = document.getElementById('regMobile').value.trim();
+  var saiId  = document.getElementById('regSaiId').value.trim();
+  var errEl  = document.getElementById('regErr');
+  var errMsg = document.getElementById('regErrMsg');
+  var btn    = document.getElementById('regSubmitBtn');
 
   if (!name || !sport || !mobile) {
     errEl.classList.add('visible'); errMsg.textContent = 'Please fill in Name, Sport and Mobile.'; return;
@@ -5163,20 +5112,21 @@ async function submitRegistration() {
     errEl.classList.add('visible'); errMsg.textContent = 'Enter a valid 10-digit mobile number.'; return;
   }
   errEl.classList.remove('visible');
-  btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i>&nbsp; Submitting…';
+  btn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i>&nbsp; Generating ticket…';
   btn.style.pointerEvents = 'none';
 
   await ensureDBLoaded();
 
-  const idType = window._regIdType || 'aadhaar';
-  const idData = window._regIdData || null;
-  const idName = window._regIdFileName || null;
-  const ticketId = 'REQ-' + Date.now().toString(36).toUpperCase().slice(-6);
+  var idType = window._regIdType || 'aadhaar';
+  var idData = window._regIdData || null;
+  var idName = window._regIdFileName || null;
+  var ticketId = 'REQ-' + Date.now().toString(36).toUpperCase().slice(-6);
+  var submittedAt = new Date().toISOString();
 
-  const req = {
-    id: ticketId, name, sport, mobile, saiId,
+  var req = {
+    id: ticketId, name: name, sport: sport, mobile: mobile, saiId: saiId,
     govIdType: idType, govIdData: idData, govIdFileName: idName,
-    status: 'pending', submittedAt: new Date().toISOString(),
+    status: 'pending', submittedAt: submittedAt,
     reviewedBy: null, reviewedAt: null,
     generatedUsername: null, generatedPassword: null
   };
@@ -5184,8 +5134,15 @@ async function submitRegistration() {
   if (!db.registrationRequests) db.registrationRequests = [];
   db.registrationRequests.unshift(req);
   await saveDB();
-  await syncToCloud(); // push to Firebase so warden/admin on any device can see it
   try { updateBadges(); } catch(e) {}
+
+  // Encode ticket data so warden can import by pasting the code
+  var ticketData = { id: ticketId, name: name, sport: sport, mobile: mobile,
+    saiId: saiId, govIdType: idType, submittedAt: submittedAt };
+  var encoded = '';
+  try { encoded = btoa(unescape(encodeURIComponent(JSON.stringify(ticketData)))); } catch(e){}
+  // Full importable ticket string = TICKETID:base64data
+  var fullCode = ticketId + ':' + encoded;
 
   btn.innerHTML = '<i class="ti ti-send"></i>&nbsp; Submit Request';
   btn.style.pointerEvents = '';
@@ -5194,16 +5151,23 @@ async function submitRegistration() {
   document.getElementById('regSuccess').style.display = 'block';
   document.getElementById('regSuccess').innerHTML =
     '<div style="text-align:center;padding:8px 0">' +
-    '<div style="font-size:40px;margin-bottom:10px">&#127915;</div>' +
+    '<div style="font-size:36px;margin-bottom:10px">&#127915;</div>' +
     '<div style="font-weight:900;font-size:15px;color:#166534;margin-bottom:6px">Request Submitted!</div>' +
-    '<div style="font-size:11px;color:#475569;margin-bottom:16px">Save your Ticket ID. Come back to <b>My Ticket</b> tab after approval to get your login.</div>' +
-    '<div style="background:linear-gradient(135deg,#0a1628,#1a3a6b);border-radius:14px;padding:20px;margin-bottom:14px">' +
-    '<div style="color:rgba(255,255,255,.6);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">YOUR TICKET ID</div>' +
-    '<div style="font-size:26px;font-weight:900;font-family:monospace;color:#f97316;letter-spacing:3px">' + ticketId + '</div>' +
-    '<div style="color:rgba(255,255,255,.5);font-size:10px;margin-top:6px">Screenshot or write this down!</div></div>' +
-    '<button class="btn-login" style="background:linear-gradient(135deg,#1e1b4b,#312e81)" onclick="switchLoginTab(\x27ticket\x27);document.getElementById(\x27ticketInput\x27).value=\x27' + ticketId + '\x27">' +
-    '<i class="ti ti-ticket"></i>&nbsp; Go to My Ticket</button></div>';
+    '<div style="font-size:11px;color:#475569;margin-bottom:14px">Your <b>Registration Code</b> is below. Share it with the warden — they will paste it into User Management to approve you.</div>' +
+    '<div style="background:#0a1628;border-radius:12px;padding:16px 14px;margin-bottom:14px;text-align:left">' +
+    '<div style="color:rgba(255,255,255,.5);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">TICKET ID</div>' +
+    '<div style="font-size:20px;font-weight:900;font-family:monospace;color:#f97316;letter-spacing:2px;margin-bottom:12px">' + ticketId + '</div>' +
+    '<div style="color:rgba(255,255,255,.5);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">FULL REGISTRATION CODE (share this with warden)</div>' +
+    '<div id="fullCodeBox" style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px;font-family:monospace;font-size:9px;color:#93c5fd;word-break:break-all;line-height:1.5;max-height:80px;overflow-y:auto">' + fullCode + '</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px">' +
+    '<button class="btn-login" id="copyCodeBtn" style="background:#1a3a6b;padding:8px 16px;font-size:11px" onclick="copyRegCode()">&#128203; Copy Code</button>' +
+    '<button class="btn-login" style="background:#166534;padding:8px 16px;font-size:11px" onclick="switchLoginTab(\x27ticket\x27);document.getElementById(\x27ticketInput\x27).value=\x27' + ticketId + '\x27">Check Status</button>' +
+    '</div>' +
+    '<div style="background:#fef9c3;border-radius:8px;padding:10px;font-size:10px;color:#92400e">&#9888; Send the <b>Full Registration Code</b> to the warden via WhatsApp or in person. Once approved, come back to <b>My Ticket</b> tab.</div>' +
+    '</div>';
 }
+
 
 // Ticket lookup — resident enters ticket ID to get credentials
 async function lookupTicket() {
@@ -5280,6 +5244,70 @@ async function lookupTicket() {
 
 // ── User Management Page ──────────────────────────────────
 let umCurrentTab = 'pending';
+
+// ── Import ticket code pasted by warden ──────────────────
+async function importTicketCode() {
+  var raw = (document.getElementById('importTicketCode').value || '').trim();
+  if (!raw) { toast('Please paste the registration code first', 'error'); return; }
+
+  await ensureDBLoaded();
+  if (!db.registrationRequests) db.registrationRequests = [];
+
+  // Try parsing: format is "REQ-XXXXXX:base64data" OR just a ticket ID
+  var req = null;
+
+  if (raw.includes(':')) {
+    // Full encoded code
+    var parts = raw.split(':');
+    var ticketId = parts[0].toUpperCase().trim();
+    var encoded = parts.slice(1).join(':').trim();
+    try {
+      var decoded = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+      req = {
+        id: decoded.id || ticketId,
+        name: decoded.name || 'Unknown',
+        sport: decoded.sport || '',
+        mobile: decoded.mobile || '',
+        saiId: decoded.saiId || '',
+        govIdType: decoded.govIdType || 'aadhaar',
+        govIdData: null,
+        govIdFileName: null,
+        status: 'pending',
+        submittedAt: decoded.submittedAt || new Date().toISOString(),
+        reviewedBy: null, reviewedAt: null,
+        generatedUsername: null, generatedPassword: null
+      };
+    } catch(e) {
+      toast('Invalid code format. Ask resident to copy the full code again.', 'error');
+      return;
+    }
+  } else {
+    // Just a ticket ID — check if already in local DB
+    var existing = db.registrationRequests.find(function(r){ return r.id === raw.toUpperCase(); });
+    if (existing) {
+      toast('Ticket ' + raw + ' is already in the queue (' + existing.status + ')', 'error');
+      return;
+    }
+    toast('Please paste the full Registration Code (not just the ticket ID)', 'error');
+    return;
+  }
+
+  // Check for duplicate
+  var dup = db.registrationRequests.find(function(r){ return r.id === req.id; });
+  if (dup) {
+    toast('Ticket ' + req.id + ' already exists (' + dup.status + ')', 'error');
+    document.getElementById('importTicketCode').value = '';
+    return;
+  }
+
+  db.registrationRequests.unshift(req);
+  await saveDB();
+  updateBadges();
+  document.getElementById('importTicketCode').value = '';
+  switchUMTab('pending');
+  renderUserMgmt();
+  toast(req.name + ' added to pending queue! Review and approve below.');
+}
 
 function renderUserMgmt() {
   if (!db) return;
