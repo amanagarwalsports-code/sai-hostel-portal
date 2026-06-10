@@ -1408,13 +1408,145 @@ function copyRegCode() {
   }
 }
 
-// Sync stubs - no-op, localStorage only
-async function syncFromCloud() { return true; }
-async function syncToCloud() { return; }
+// ═══════════════════════════════════════════════════════════
+// CROSS-DEVICE SYNC via Supabase (free tier)
+// Syncs registrationRequests + residentUsers across all devices
+// so resident registration reaches warden on any device,
+// and warden approval reaches resident on any device.
+// ═══════════════════════════════════════════════════════════
+var SB_URL  = 'https://xyzcompany.supabase.co'; // will be set on first run
+var SB_KEY  = '';
+var SB_READY = false;
+var SB_PROJECT = null; // loaded from localStorage
+
+// We use a free public Supabase-compatible service: Pocketbase Cloud
+// OR we use the app's own GitHub repo raw URL as a read endpoint
+// ACTUAL WORKING APPROACH: Use a free KV store API (kvdb.io - no signup needed)
+var KVDB_BUCKET = ''; // auto-created on first write
+var KVDB_BASE   = 'https://kvdb.io';
+
+async function kvGet(key) {
+  if (!KVDB_BUCKET) await kvInit();
+  if (!KVDB_BUCKET) return null;
+  try {
+    var r = await fetch(KVDB_BASE + '/' + KVDB_BUCKET + '/' + key, {cache:'no-store'});
+    if (!r.ok) return null;
+    var text = await r.text();
+    return text ? JSON.parse(text) : null;
+  } catch(e) { return null; }
+}
+
+async function kvSet(key, value) {
+  if (!KVDB_BUCKET) await kvInit();
+  if (!KVDB_BUCKET) return false;
+  try {
+    var r = await fetch(KVDB_BASE + '/' + KVDB_BUCKET + '/' + key, {
+      method: 'POST',
+      headers: {'Content-Type':'text/plain'},
+      body: JSON.stringify(value)
+    });
+    return r.ok;
+  } catch(e) { return false; }
+}
+
+async function kvInit() {
+  // Try to load bucket from localStorage
+  try { KVDB_BUCKET = localStorage.getItem('sai_kvdb_bucket') || ''; } catch(e) {}
+  if (KVDB_BUCKET) return;
+  // Create a new bucket
+  try {
+    var r = await fetch(KVDB_BASE, { method: 'POST' });
+    if (r.ok) {
+      var id = (await r.text()).trim();
+      if (id && id.length > 5) {
+        KVDB_BUCKET = id;
+        try { localStorage.setItem('sai_kvdb_bucket', id); } catch(e) {}
+        showSyncSetupBanner(id);
+      }
+    }
+  } catch(e) { console.warn('kvInit failed:', e.message); }
+}
+
+function showSyncSetupBanner(bucketId) {
+  var shareUrl = location.href.split('?')[0].split('#')[0] + '?kv=' + bucketId;
+  var banner = document.createElement('div');
+  banner.id = 'syncSetupBanner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#1a3a6b;color:white;padding:10px 16px;font-size:11px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 12px rgba(0,0,0,.4)';
+  var info = document.createElement('div');
+  info.style.flex = '1';
+  info.innerHTML = '<b style="color:#4ade80">&#x2714; Cloud Sync Active!</b> All registration requests now sync across devices. Share this URL with warden and residents: <span style="font-family:monospace;font-size:9px;color:#93c5fd">' + shareUrl + '</span>';
+  var copyBtn = document.createElement('button');
+  copyBtn.textContent = 'Copy URL';
+  copyBtn.style.cssText = 'background:#f97316;border:none;color:white;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:10px;font-weight:700;flex-shrink:0';
+  copyBtn.onclick = function() { if(navigator.clipboard) navigator.clipboard.writeText(shareUrl); copyBtn.textContent='Copied!'; };
+  var closeBtn = document.createElement('button');
+  closeBtn.textContent = '\u00D7';
+  closeBtn.style.cssText = 'background:none;border:none;color:white;font-size:18px;cursor:pointer;flex-shrink:0;padding:0 4px';
+  closeBtn.onclick = function() { banner.remove(); };
+  banner.appendChild(info);
+  banner.appendChild(copyBtn);
+  banner.appendChild(closeBtn);
+  document.body.prepend(banner);
+}
+
+// Check URL param for shared bucket ID
+(function() {
+  try {
+    var urlKv = new URLSearchParams(location.search).get('kv');
+    if (urlKv && /^[A-Za-z0-9_-]{6,}$/.test(urlKv)) {
+      KVDB_BUCKET = urlKv;
+      try { localStorage.setItem('sai_kvdb_bucket', urlKv); } catch(e) {}
+    } else {
+      try { KVDB_BUCKET = localStorage.getItem('sai_kvdb_bucket') || ''; } catch(e) {}
+    }
+  } catch(e) {}
+})();
+
+async function syncFromCloud() {
+  if (!KVDB_BUCKET) return false;
+  try {
+    var data = await kvGet('sai_shared');
+    if (!data) return false;
+    // Merge registrationRequests
+    if (Array.isArray(data.registrationRequests) && data.registrationRequests.length > 0) {
+      var localMap = {};
+      (db.registrationRequests || []).forEach(function(r) { localMap[r.id] = r; });
+      data.registrationRequests.forEach(function(r) {
+        if (!localMap[r.id] || r.status !== 'pending') localMap[r.id] = r;
+      });
+      db.registrationRequests = Object.values(localMap).sort(function(a,b) {
+        return new Date(b.submittedAt) - new Date(a.submittedAt);
+      });
+    }
+    // Merge residentUsers
+    if (Array.isArray(data.residentUsers) && data.residentUsers.length > 0) {
+      var userMap = {};
+      (db.residentUsers || []).forEach(function(u) { userMap[u.id] = u; });
+      data.residentUsers.forEach(function(u) { userMap[u.id] = u; });
+      db.residentUsers = Object.values(userMap);
+    }
+    return true;
+  } catch(e) { console.warn('syncFromCloud:', e); return false; }
+}
+
+async function syncToCloud() {
+  if (!KVDB_BUCKET) { await kvInit(); if (!KVDB_BUCKET) return; }
+  try {
+    var reqs = (db.registrationRequests || []).map(function(r) {
+      var c = Object.assign({}, r); delete c.govIdData; return c;
+    });
+    await kvSet('sai_shared', {
+      registrationRequests: reqs,
+      residentUsers: db.residentUsers || [],
+      updatedAt: new Date().toISOString()
+    });
+  } catch(e) { console.warn('syncToCloud:', e); }
+}
+
 var GH_TOKEN = '';
 function saveGHToken(){}
 async function testGHSync(){}
-async function forceSyncNow(){}
+async function forceSyncNow(){ await syncToCloud(); toast('Synced to cloud!'); }
 // ─── Key schema ──────────────────────────────────────────
 // window.storage (Claude API) = text data only, no photos
 // IndexedDB (local browser)   = Aadhaar photos (base64)
@@ -5129,6 +5261,7 @@ function submitRegistration() {
     };
     db.registrationRequests.unshift(req);
     saveDB();
+    syncToCloud(); // push to cloud so warden sees it on any device
     try { updateBadges(); } catch(e) {}
   });
 
@@ -5232,9 +5365,12 @@ function lookupTicket() {
     return;
   }
 
-  // ── Case 2: Ticket ID lookup (check local DB status)
+  // ── Case 2: Ticket ID lookup (check local + cloud DB status)
   var ticketId = input.toUpperCase();
+  result.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)"><i class="ti ti-loader-2" style="animation:spin .7s linear infinite;font-size:24px;display:block;margin-bottom:8px"></i>Checking...</div>';
   ensureDBLoaded().then(function() {
+    return syncFromCloud(); // pull latest from cloud first
+  }).then(function() {
     var req = (db.registrationRequests || []).find(function(r) { return r.id === ticketId; });
     if (!req) {
       result.innerHTML = '<div style="background:#fff1f2;border:1.5px solid #fca5a5;border-radius:12px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:8px">&#10060;</div><div style="font-weight:800;font-size:13px;color:#991b1b">Ticket Not Found</div><div style="font-size:11px;color:#dc2626;margin-top:6px">This ticket ID was not found on this device. If you registered on a different device, wait for the warden to send you the Credential Code directly.</div></div>';
@@ -5304,6 +5440,7 @@ function importTicketCode() {
 
   db.registrationRequests.unshift(req);
   saveDB();
+  syncToCloud();
   updateBadges();
   document.getElementById('importTicketCode').value = '';
   switchUMTab('pending');
@@ -5328,8 +5465,12 @@ function renderUserMgmt() {
   if (!db) return;
   if (!db.registrationRequests) db.registrationRequests = [];
   if (!db.residentUsers) db.residentUsers = [];
+  // Show local data immediately, then refresh from cloud
   switchUMTab(umCurrentTab);
   updateBadges();
+  syncFromCloud().then(function(got) {
+    if (got) { switchUMTab(umCurrentTab); updateBadges(); }
+  });
 }
 
 function switchUMTab(tab) {
@@ -5443,6 +5584,7 @@ function approveRequest(reqId) {
   req.generatedPassword = password;
 
   saveDB();
+  syncToCloud(); // push approved user to cloud so resident can check status
   updateBadges();
   renderUserMgmt();
 
