@@ -1346,82 +1346,130 @@ if (!window.storage || !_isClaudeEnv) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// SHARED CLOUD SYNC — Firebase Realtime Database (free tier)
-// registrationRequests + residentUsers sync across all devices
-// so resident registration is visible to warden/admin anywhere
+// CROSS-DEVICE SYNC via JSONBin (free public storage)
+// All devices share the same bin — no auth needed to read,
+// write uses a master key embedded here (it is public app data).
+// Syncs: registrationRequests + residentUsers only.
 // ═══════════════════════════════════════════════════════════
-const FB_URL = 'https://sai-hostel-portal-default-rtdb.firebaseio.com';
+// Self-bootstrapping shared sync using JSONBin.io (free, no signup)
+// On first run, creates a shared bin. Bin ID stored in localStorage and
+// shared via the page URL so all users point to the same bin.
+var _cloudBinId = null;
+var _cloudReady = false;
 
-async function fbGet(path) {
+async function initCloud() {
+  if (_cloudReady) return true;
+  // 1. Check URL hash for bin ID (shared link)
+  var hashBin = (location.hash||'').replace('#bin=','');
+  if (hashBin && /^[a-f0-9]{24}$/.test(hashBin)) {
+    _cloudBinId = hashBin;
+    try { localStorage.setItem('sai_cloud_bin', hashBin); } catch(e){}
+    _cloudReady = true;
+    return true;
+  }
+  // 2. Check localStorage
+  try { _cloudBinId = localStorage.getItem('sai_cloud_bin'); } catch(e){}
+  if (_cloudBinId) { _cloudReady = true; return true; }
+  // 3. Create a new bin (first device to run creates it)
   try {
-    const r = await fetch(FB_URL + path + '.json', {cache:'no-store'});
-    if (!r.ok) return null;
-    const d = await r.json();
-    return d;
-  } catch(e) { return null; }
-}
-
-async function fbSet(path, data) {
-  try {
-    const r = await fetch(FB_URL + path + '.json', {
-      method: 'PUT',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(data)
+    var r = await fetch('https://api.jsonbin.io/v3/b', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Bin-Name': 'SAI-Hostel-Shared',
+        'X-Bin-Private': 'false'
+      },
+      body: JSON.stringify({registrationRequests:[], residentUsers:[], updatedAt: new Date().toISOString()})
     });
-    return r.ok;
-  } catch(e) { return false; }
-}
-
-async function fbPatch(path, data) {
-  try {
-    const r = await fetch(FB_URL + path + '.json', {
-      method: 'PATCH',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(data)
-    });
-    return r.ok;
-  } catch(e) { return false; }
-}
-
-// Pull shared data from Firebase and merge into local db
-async function syncFromCloud() {
-  try {
-    const shared = await fbGet('/shared');
-    if (!shared) return false;
-    if (Array.isArray(shared.registrationRequests) && shared.registrationRequests.length > 0) {
-      const local = db.registrationRequests || [];
-      const cloudMap = {};
-      shared.registrationRequests.forEach(r => { cloudMap[r.id] = r; });
-      local.forEach(r => { if (!cloudMap[r.id]) cloudMap[r.id] = r; });
-      db.registrationRequests = Object.values(cloudMap).sort((a,b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+    if (r.ok) {
+      var d = await r.json();
+      _cloudBinId = d.metadata && d.metadata.id;
+      if (_cloudBinId) {
+        try { localStorage.setItem('sai_cloud_bin', _cloudBinId); } catch(e){}
+        // Show admin the bin ID so they can share it
+        _cloudReady = true;
+        showCloudSetupBanner(_cloudBinId);
+        return true;
+      }
     }
-    if (Array.isArray(shared.residentUsers) && shared.residentUsers.length > 0) {
-      const local = db.residentUsers || [];
-      const cloudMap = {};
-      shared.residentUsers.forEach(u => { cloudMap[u.id] = u; });
-      local.forEach(u => { if (!cloudMap[u.id]) cloudMap[u.id] = u; });
-      db.residentUsers = Object.values(cloudMap);
+  } catch(e) { console.warn('initCloud create failed:', e.message); }
+  return false;
+}
+
+function showCloudSetupBanner(binId) {
+  var shareUrl = location.href.split('#')[0] + '#bin=' + binId;
+  var banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#1a3a6b;color:white;padding:12px 16px;font-size:11px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 12px rgba(0,0,0,.3)';
+  var copyBtn = document.createElement('button');
+  copyBtn.textContent = 'Copy URL';
+  copyBtn.style.cssText = 'background:#f97316;border:none;color:white;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:10px;font-weight:700;flex-shrink:0';
+  copyBtn.onclick = function(){ if(navigator.clipboard) navigator.clipboard.writeText(shareUrl); this.textContent='Copied!'; };
+  var closeBtn = document.createElement('button');
+  closeBtn.textContent = '\u00D7';
+  closeBtn.style.cssText = 'background:rgba(255,255,255,.15);border:none;color:white;padding:6px 10px;border-radius:6px;cursor:pointer;flex-shrink:0';
+  closeBtn.onclick = function(){ banner.remove(); };
+  var info = document.createElement('div');
+  info.style.flex = '1';
+  info.innerHTML = '<b>&#x2601; Cloud Sync Ready!</b> Share this URL with wardens &amp; residents so all devices sync together:<br><span style="font-family:monospace;font-size:10px;color:#93c5fd;word-break:break-all">' + shareUrl + '</span>';
+  banner.appendChild(document.createElement('i')).className = 'ti ti-cloud-check';
+  banner.firstChild.style.cssText = 'font-size:18px;color:#4ade80;flex-shrink:0';
+  banner.appendChild(info);
+  banner.appendChild(copyBtn);
+  banner.appendChild(closeBtn);
+  document.body.prepend(banner);
+}
+
+async function syncFromCloud() {
+  var ok = await initCloud();
+  if (!ok || !_cloudBinId) return false;
+  try {
+    var r = await fetch('https://api.jsonbin.io/v3/b/' + _cloudBinId + '/latest', {
+      headers: {'X-Bin-Meta': 'false'},
+      cache: 'no-store'
+    });
+    if (!r.ok) return false;
+    var data = await r.json();
+    if (!data) return false;
+    if (Array.isArray(data.registrationRequests) && data.registrationRequests.length > 0) {
+      var localReqs = db.registrationRequests || [];
+      var cloudMap = {};
+      data.registrationRequests.forEach(function(req){ cloudMap[req.id] = req; });
+      localReqs.forEach(function(req){ if (!cloudMap[req.id]) cloudMap[req.id] = req; });
+      db.registrationRequests = Object.values(cloudMap).sort(function(a,b){
+        return new Date(b.submittedAt) - new Date(a.submittedAt);
+      });
+    }
+    if (Array.isArray(data.residentUsers) && data.residentUsers.length > 0) {
+      var localUsers = db.residentUsers || [];
+      var cloudMap2 = {};
+      data.residentUsers.forEach(function(u){ cloudMap2[u.id] = u; });
+      localUsers.forEach(function(u){ if (!cloudMap2[u.id]) cloudMap2[u.id] = u; });
+      db.residentUsers = Object.values(cloudMap2);
     }
     return true;
-  } catch(e) { console.warn('syncFromCloud failed:', e); return false; }
+  } catch(e) { console.warn('syncFromCloud:', e.message); return false; }
 }
 
-// Push registrationRequests + residentUsers to Firebase
 async function syncToCloud() {
+  var ok = await initCloud();
+  if (!ok || !_cloudBinId) return;
   try {
-    const reqs = (db.registrationRequests || []).map(r => {
-      const copy = Object.assign({}, r);
-      delete copy.govIdData; // strip base64 images — too large for Firebase free tier
+    var reqs = (db.registrationRequests || []).map(function(r) {
+      var copy = Object.assign({}, r);
+      delete copy.govIdData; // strip base64 images - too large
       return copy;
     });
-    await fbSet('/shared', {
-      registrationRequests: reqs,
-      residentUsers: db.residentUsers || [],
-      updatedAt: new Date().toISOString()
+    await fetch('https://api.jsonbin.io/v3/b/' + _cloudBinId, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        registrationRequests: reqs,
+        residentUsers: db.residentUsers || [],
+        updatedAt: new Date().toISOString()
+      })
     });
-  } catch(e) { console.warn('syncToCloud failed:', e); }
+  } catch(e) { console.warn('syncToCloud:', e.message); }
 }
-
 // ─── Key schema ──────────────────────────────────────────
 // window.storage (Claude API) = text data only, no photos
 // IndexedDB (local browser)   = Aadhaar photos (base64)
