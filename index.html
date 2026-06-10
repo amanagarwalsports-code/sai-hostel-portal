@@ -1175,7 +1175,38 @@ function doGet(e) {
             </div>
             <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="saveSettings()"><i class="ti ti-check"></i> Save Settings</button>
           </div>
+
+          <!-- CROSS-DEVICE SYNC CARD -->
           <div class="card" style="padding:18px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+              <div style="width:32px;height:32px;background:#0d1117;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <i class="ti ti-brand-github" style="color:white;font-size:16px"></i>
+              </div>
+              <div>
+                <div style="font-size:13px;font-weight:800;color:var(--text)">Cross-Device Sync</div>
+                <div style="font-size:10px;color:var(--text3)">Share registrations across warden &amp; resident devices</div>
+              </div>
+            </div>
+            <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:10px;color:#166534;line-height:1.6">
+              <b>How it works:</b> Enter a GitHub Personal Access Token with <code>repo</code> scope. All registration requests and approvals sync to your GitHub repo's <code>data.json</code> so warden, admin and residents see the same data from any device.
+            </div>
+            <div class="form-field" style="margin-bottom:10px">
+              <label class="label">GitHub Personal Access Token</label>
+              <div class="pw-wrap">
+                <input class="input" id="ghTokenInput" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="font-family:monospace;font-size:11px"/>
+                <button class="pw-toggle" type="button" onclick="var i=document.getElementById('ghTokenInput');i.type=i.type==='password'?'text':'password'"><i class="ti ti-eye"></i></button>
+              </div>
+            </div>
+            <div style="font-size:9px;color:var(--text3);margin-bottom:10px">
+              Get one at: <a href="https://github.com/settings/tokens/new?scopes=repo&description=SAI-Hostel-Sync" target="_blank" style="color:var(--accent)">github.com/settings/tokens</a> → Select <b>repo</b> scope → Generate
+            </div>
+            <div id="ghSyncStatus" style="display:none;margin-bottom:10px;padding:8px 10px;border-radius:8px;font-size:10px;font-weight:700"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-primary btn-sm" onclick="saveGHToken()"><i class="ti ti-check"></i> Save Token</button>
+              <button class="btn btn-ghost btn-sm" onclick="testGHSync()"><i class="ti ti-refresh"></i> Test Sync</button>
+              <button class="btn btn-ghost btn-sm" onclick="forceSyncNow()"><i class="ti ti-cloud-upload"></i> Push Now</button>
+            </div>
+          </div>
             <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">Local Database</div>
             <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:10px;color:#1d4ed8;line-height:1.7">
               <div style="font-weight:700;margin-bottom:3px"><i class="ti ti-database"></i> Centralized Persistent Database</div>
@@ -1351,123 +1382,88 @@ if (!window.storage || !_isClaudeEnv) {
 // write uses a master key embedded here (it is public app data).
 // Syncs: registrationRequests + residentUsers only.
 // ═══════════════════════════════════════════════════════════
-// Self-bootstrapping shared sync using JSONBin.io (free, no signup)
-// On first run, creates a shared bin. Bin ID stored in localStorage and
-// shared via the page URL so all users point to the same bin.
-var _cloudBinId = null;
-var _cloudReady = false;
+// ═══════════════════════════════════════════════════════════
+// CROSS-DEVICE SYNC via GitHub API
+// Uses the same GitHub repo as a shared database.
+// data.json in the repo stores registrations + resident users.
+// Reads are public (no auth). Writes use a PAT token.
+// ═══════════════════════════════════════════════════════════
+var GH_REPO  = 'amanagarwalsports-code/sai-hostel-portal';
+var GH_FILE  = 'data.json';
+var GH_TOKEN = ''; // Set this in Settings page
+var GH_SHA   = ''; // tracks current file SHA for updates
 
-async function initCloud() {
-  if (_cloudReady) return true;
-  // 1. Check URL hash for bin ID (shared link)
-  var hashBin = (location.hash||'').replace('#bin=','');
-  if (hashBin && /^[a-f0-9]{24}$/.test(hashBin)) {
-    _cloudBinId = hashBin;
-    try { localStorage.setItem('sai_cloud_bin', hashBin); } catch(e){}
-    _cloudReady = true;
-    return true;
-  }
-  // 2. Check localStorage
-  try { _cloudBinId = localStorage.getItem('sai_cloud_bin'); } catch(e){}
-  if (_cloudBinId) { _cloudReady = true; return true; }
-  // 3. Create a new bin (first device to run creates it)
-  try {
-    var r = await fetch('https://api.jsonbin.io/v3/b', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Bin-Name': 'SAI-Hostel-Shared',
-        'X-Bin-Private': 'false'
-      },
-      body: JSON.stringify({registrationRequests:[], residentUsers:[], updatedAt: new Date().toISOString()})
-    });
-    if (r.ok) {
-      var d = await r.json();
-      _cloudBinId = d.metadata && d.metadata.id;
-      if (_cloudBinId) {
-        try { localStorage.setItem('sai_cloud_bin', _cloudBinId); } catch(e){}
-        // Show admin the bin ID so they can share it
-        _cloudReady = true;
-        showCloudSetupBanner(_cloudBinId);
-        return true;
-      }
-    }
-  } catch(e) { console.warn('initCloud create failed:', e.message); }
-  return false;
-}
-
-function showCloudSetupBanner(binId) {
-  var shareUrl = location.href.split('#')[0] + '#bin=' + binId;
-  var banner = document.createElement('div');
-  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#1a3a6b;color:white;padding:12px 16px;font-size:11px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 12px rgba(0,0,0,.3)';
-  var copyBtn = document.createElement('button');
-  copyBtn.textContent = 'Copy URL';
-  copyBtn.style.cssText = 'background:#f97316;border:none;color:white;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:10px;font-weight:700;flex-shrink:0';
-  copyBtn.onclick = function(){ if(navigator.clipboard) navigator.clipboard.writeText(shareUrl); this.textContent='Copied!'; };
-  var closeBtn = document.createElement('button');
-  closeBtn.textContent = '\u00D7';
-  closeBtn.style.cssText = 'background:rgba(255,255,255,.15);border:none;color:white;padding:6px 10px;border-radius:6px;cursor:pointer;flex-shrink:0';
-  closeBtn.onclick = function(){ banner.remove(); };
-  var info = document.createElement('div');
-  info.style.flex = '1';
-  info.innerHTML = '<b>&#x2601; Cloud Sync Ready!</b> Share this URL with wardens &amp; residents so all devices sync together:<br><span style="font-family:monospace;font-size:10px;color:#93c5fd;word-break:break-all">' + shareUrl + '</span>';
-  banner.appendChild(document.createElement('i')).className = 'ti ti-cloud-check';
-  banner.firstChild.style.cssText = 'font-size:18px;color:#4ade80;flex-shrink:0';
-  banner.appendChild(info);
-  banner.appendChild(copyBtn);
-  banner.appendChild(closeBtn);
-  document.body.prepend(banner);
+async function ghGetToken() {
+  if (GH_TOKEN) return GH_TOKEN;
+  try { GH_TOKEN = localStorage.getItem('sai_gh_token') || ''; } catch(e){}
+  return GH_TOKEN;
 }
 
 async function syncFromCloud() {
-  var ok = await initCloud();
-  if (!ok || !_cloudBinId) return false;
   try {
-    var r = await fetch('https://api.jsonbin.io/v3/b/' + _cloudBinId + '/latest', {
-      headers: {'X-Bin-Meta': 'false'},
+    var url = 'https://api.github.com/repos/' + GH_REPO + '/contents/' + GH_FILE;
+    var r = await fetch(url, {
+      headers: {'Accept':'application/vnd.github.v3+json', 'Cache-Control':'no-cache'},
       cache: 'no-store'
     });
     if (!r.ok) return false;
-    var data = await r.json();
-    if (!data) return false;
+    var meta = await r.json();
+    GH_SHA = meta.sha;
+    var decoded = atob(meta.content.replace(/\n/g,''));
+    var data = JSON.parse(decoded);
     if (Array.isArray(data.registrationRequests) && data.registrationRequests.length > 0) {
       var localReqs = db.registrationRequests || [];
-      var cloudMap = {};
-      data.registrationRequests.forEach(function(req){ cloudMap[req.id] = req; });
-      localReqs.forEach(function(req){ if (!cloudMap[req.id]) cloudMap[req.id] = req; });
-      db.registrationRequests = Object.values(cloudMap).sort(function(a,b){
+      var map = {};
+      data.registrationRequests.forEach(function(r){ map[r.id] = r; });
+      localReqs.forEach(function(r){ if(!map[r.id]) map[r.id] = r; });
+      db.registrationRequests = Object.values(map).sort(function(a,b){
         return new Date(b.submittedAt) - new Date(a.submittedAt);
       });
     }
     if (Array.isArray(data.residentUsers) && data.residentUsers.length > 0) {
-      var localUsers = db.residentUsers || [];
-      var cloudMap2 = {};
-      data.residentUsers.forEach(function(u){ cloudMap2[u.id] = u; });
-      localUsers.forEach(function(u){ if (!cloudMap2[u.id]) cloudMap2[u.id] = u; });
-      db.residentUsers = Object.values(cloudMap2);
+      var map2 = {};
+      data.residentUsers.forEach(function(u){ map2[u.id] = u; });
+      (db.residentUsers||[]).forEach(function(u){ if(!map2[u.id]) map2[u.id] = u; });
+      db.residentUsers = Object.values(map2);
     }
     return true;
   } catch(e) { console.warn('syncFromCloud:', e.message); return false; }
 }
 
 async function syncToCloud() {
-  var ok = await initCloud();
-  if (!ok || !_cloudBinId) return;
+  var token = await ghGetToken();
+  if (!token) return; // no token = read-only mode
   try {
-    var reqs = (db.registrationRequests || []).map(function(r) {
-      var copy = Object.assign({}, r);
-      delete copy.govIdData; // strip base64 images - too large
-      return copy;
+    // Get current SHA if we don't have it
+    if (!GH_SHA) {
+      var r0 = await fetch('https://api.github.com/repos/' + GH_REPO + '/contents/' + GH_FILE, {
+        headers: {'Authorization':'token ' + token, 'Accept':'application/vnd.github.v3+json'}
+      });
+      if (r0.ok) { var m = await r0.json(); GH_SHA = m.sha || ''; }
+    }
+    var reqs = (db.registrationRequests||[]).map(function(r){
+      var c = Object.assign({}, r); delete c.govIdData; return c;
     });
-    await fetch('https://api.jsonbin.io/v3/b/' + _cloudBinId, {
+    var payload = {
+      registrationRequests: reqs,
+      residentUsers: db.residentUsers || [],
+      updatedAt: new Date().toISOString()
+    };
+    var body = {
+      message: 'sync: ' + new Date().toISOString().slice(0,16),
+      content: btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2)))),
+      sha: GH_SHA
+    };
+    var r2 = await fetch('https://api.github.com/repos/' + GH_REPO + '/contents/' + GH_FILE, {
       method: 'PUT',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        registrationRequests: reqs,
-        residentUsers: db.residentUsers || [],
-        updatedAt: new Date().toISOString()
-      })
+      headers: {
+        'Authorization': 'token ' + token,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
     });
+    if (r2.ok) { var res = await r2.json(); GH_SHA = res.content && res.content.sha || GH_SHA; }
   } catch(e) { console.warn('syncToCloud:', e.message); }
 }
 // ─── Key schema ──────────────────────────────────────────
@@ -3281,6 +3277,40 @@ function renderSettings(){
     document.getElementById('setCurfew').value=db.settings.curfew||'22:00';
     document.getElementById('setYear').value=db.settings.academicYear||'';
   }
+  // Load saved GitHub token
+  try {
+    var t = localStorage.getItem('sai_gh_token')||'';
+    var inp = document.getElementById('ghTokenInput');
+    if(inp) inp.value = t;
+  } catch(e){}
+}
+
+function saveGHToken() {
+  var token = (document.getElementById('ghTokenInput').value||'').trim();
+  try { localStorage.setItem('sai_gh_token', token); } catch(e){}
+  GH_TOKEN = token;
+  var st = document.getElementById('ghSyncStatus');
+  if(st){ st.style.cssText='display:block;padding:8px 10px;border-radius:8px;font-size:10px;font-weight:700;background:#f0fdf4;color:#166534;border:1px solid #86efac'; st.textContent='Token saved! Click Test Sync to verify.'; }
+  toast('GitHub token saved');
+}
+
+async function testGHSync() {
+  var st = document.getElementById('ghSyncStatus');
+  if(st){ st.style.cssText='display:block;padding:8px 10px;border-radius:8px;font-size:10px;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe'; st.textContent='Testing connection...'; }
+  var ok = await syncFromCloud();
+  if(st){
+    if(ok){ st.style.cssText='display:block;padding:8px 10px;border-radius:8px;font-size:10px;font-weight:700;background:#f0fdf4;color:#166534;border:1px solid #86efac'; st.textContent='Connected! ' + (db.registrationRequests||[]).length + ' registration(s) synced from GitHub.'; }
+    else { st.style.cssText='display:block;padding:8px 10px;border-radius:8px;font-size:10px;font-weight:700;background:#fff1f2;color:#991b1b;border:1px solid #fca5a5'; st.textContent='Connection failed. Check token and repo. Make sure data.json exists in the repo root.'; }
+  }
+  renderUserMgmt();
+}
+
+async function forceSyncNow() {
+  var st = document.getElementById('ghSyncStatus');
+  if(st){ st.style.cssText='display:block;padding:8px 10px;border-radius:8px;font-size:10px;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe'; st.textContent='Pushing to GitHub...'; }
+  await syncToCloud();
+  if(st){ st.style.cssText='display:block;padding:8px 10px;border-radius:8px;font-size:10px;font-weight:700;background:#f0fdf4;color:#166534;border:1px solid #86efac'; st.textContent='Done! All registrations and users are now synced to GitHub.'; }
+  toast('Pushed to GitHub!');
 }
 async function saveSettings(){
   if(!db.settings)db.settings={};
