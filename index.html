@@ -5427,28 +5427,19 @@ function switchUMTab(tab) {
 }
 
 // ── APPROVE / REJECT / BAN / UNBAN / REMOVE ──────────────────────────────
-async function approveRequest(reqId) {
+function approveRequest(reqId) {
   var req = (db.registrationRequests || []).find(function(r) { return r.id === reqId; });
   if (!req) { toast('Request not found', 'error'); return; }
 
-  // Disable all approve buttons while processing
+  // Disable approve buttons while processing
   document.querySelectorAll('[id^="approve-btn-"]').forEach(function(b) {
     b.disabled = true;
     b.innerHTML = '<i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i> Approving...';
   });
 
-  toast('Generating credentials...');
-
-  // Generate credentials (AI with 5s timeout, falls back to local)
-  var creds = await generateAICredentials(req.name, req.sport);
-  var username, password;
-  if (creds && creds.username && creds.password) {
-    username = creds.username.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 15);
-    password = creds.password;
-  } else {
-    username = generateUsername(req.name);
-    password = generatePassword();
-  }
+  // Generate credentials locally — instant, no external API needed
+  var username = generateUsername(req.name);
+  var password = generatePassword();
 
   // Ensure unique username
   var existing = (db.residentUsers || []).map(function(u) { return u.username; });
@@ -5473,10 +5464,10 @@ async function approveRequest(reqId) {
   req.generatedUsername = username;
   req.generatedPassword = password;
 
-  await saveDB();
+  saveDB();
   updateBadges();
   renderUserMgmt();
-
+  toast(req.name + ' approved!');
   openModal('Account Approved \u2713',
     '<div style="text-align:center;margin-bottom:16px">'
     + '<i class="ti ti-circle-check" style="font-size:44px;color:#16a34a"></i>'
