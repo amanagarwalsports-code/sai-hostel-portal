@@ -5087,8 +5087,12 @@ function generatePassword() {
 // AI credential generator via Claude API
 async function generateAICredentials(name, sport) {
   try {
+    // 5 second timeout - don't block approval if API is slow
+    var controller = new AbortController();
+    var timer = setTimeout(function() { controller.abort(); }, 5000);
     var resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
+      signal: controller.signal,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
@@ -5096,12 +5100,13 @@ async function generateAICredentials(name, sport) {
         messages: [{ role: 'user', content: 'Generate username and password for hostel resident. Name: ' + name + ', Sport: ' + sport + '. Username: lowercase, 6-12 chars, name+sport+numbers. Password: 8-9 chars, mixed case+numbers+symbol. Reply ONLY with valid JSON: {"username":"...","password":"..."}' }]
       })
     });
+    clearTimeout(timer);
     if (!resp.ok) throw new Error('api');
     var data = await resp.json();
     var text = (data.content || []).map(function(b) { return b.text || ''; }).join('').trim();
     var parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
     if (parsed.username && parsed.password) return parsed;
-  } catch(e) {}
+  } catch(e) { /* fallback to local */ }
   return null;
 }
 
@@ -5326,6 +5331,25 @@ function renderUserMgmt() {
   if (!db.residentUsers) db.residentUsers = [];
   switchUMTab(umCurrentTab);
   updateBadges();
+  // Event delegation - handles dynamically rendered approve/reject buttons
+  var el = document.getElementById('umContent');
+  if (el && !el._delegated) {
+    el._delegated = true;
+    el.addEventListener('click', function(e) {
+      var btn = e.target.closest('[data-approve]');
+      if (btn) { approveRequest(btn.getAttribute('data-approve')); return; }
+      var btn2 = e.target.closest('[data-reject]');
+      if (btn2) { rejectRequest(btn2.getAttribute('data-reject')); return; }
+      var btn3 = e.target.closest('[data-ban]');
+      if (btn3) { banUser(btn3.getAttribute('data-ban')); return; }
+      var btn4 = e.target.closest('[data-unban]');
+      if (btn4) { unbanUser(btn4.getAttribute('data-unban')); return; }
+      var btn5 = e.target.closest('[data-remove]');
+      if (btn5) { removeUser(btn5.getAttribute('data-remove')); return; }
+      var btn6 = e.target.closest('[data-creds]');
+      if (btn6) { showCredentials(btn6.getAttribute('data-creds')); return; }
+    });
+  }
 }
 
 function switchUMTab(tab) {
@@ -5347,7 +5371,7 @@ function switchUMTab(tab) {
     }
     el.innerHTML = reqs.map(function(r) {
       var initials = r.name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
-      return '<div class="um-card" style="flex-wrap:wrap;align-items:flex-start">'
+      return '<div class="um-card" style="flex-wrap:wrap;align-items:flex-start" id="umcard-' + r.id + '">'
         + '<div style="display:flex;align-items:center;gap:12px;width:100%">'
         + '<div class="um-av" style="background:#f59e0b">' + initials + '</div>'
         + '<div style="flex:1;min-width:0">'
@@ -5356,8 +5380,8 @@ function switchUMTab(tab) {
         + '<div class="um-meta" style="margin-top:2px">Ticket: <b style="font-family:monospace">' + r.id + '</b> &middot; ' + new Date(r.submittedAt).toLocaleDateString('en-IN') + '</div>'
         + '</div><span class="badge-pending">Pending</span></div>'
         + '<div style="display:flex;gap:6px;margin-top:10px;margin-left:auto">'
-        + '<button class="btn btn-xs" style="background:#dcfce7;color:#166534;border:none" onclick="approveRequest(\'' + r.id + '\')"><i class="ti ti-check"></i> Approve</button>'
-        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#991b1b;border:none" onclick="rejectRequest(\'' + r.id + '\')"><i class="ti ti-x"></i> Reject</button>' : '')
+        + '<button class="btn btn-xs" style="background:#dcfce7;color:#166534;border:none" data-approve="' + r.id + '"><i class="ti ti-check"></i> Approve</button>'
+        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#991b1b;border:none" data-reject="' + r.id + '"><i class="ti ti-x"></i> Reject</button>' : '')
         + '</div></div>';
     }).join('');
 
@@ -5377,9 +5401,9 @@ function switchUMTab(tab) {
         + '<div class="um-meta" style="margin-top:2px">Approved: ' + new Date(u.approvedAt).toLocaleDateString('en-IN') + ' by ' + u.approvedBy + '</div>'
         + '</div><span class="badge-approved">Active</span>'
         + '<div class="um-actions">'
-        + (isSA ? '<button class="btn btn-xs" style="background:#fef9c3;color:#854d0e;border:none" onclick="showCredentials(\'' + u.id + '\')"><i class="ti ti-key"></i> Creds</button>' : '')
-        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#991b1b;border:none" onclick="banUser(\'' + u.id + '\')"><i class="ti ti-ban"></i> Ban</button>' : '')
-        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#7f1d1d;border:none" onclick="removeUser(\'' + u.id + '\')"><i class="ti ti-trash"></i></button>' : '')
+        + (isSA ? '<button class="btn btn-xs" style="background:#fef9c3;color:#854d0e;border:none" data-creds="' + u.id + '"><i class="ti ti-key"></i> Creds</button>' : '')
+        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#991b1b;border:none" data-ban="' + u.id + '"><i class="ti ti-ban"></i> Ban</button>' : '')
+        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#7f1d1d;border:none" data-remove="' + u.id + '"><i class="ti ti-trash"></i></button>' : '')
         + '</div></div>';
     }).join('');
 
@@ -5399,8 +5423,8 @@ function switchUMTab(tab) {
         + '<div class="um-meta">' + u.sport + ' &middot; <b style="font-family:monospace">' + u.username + '</b></div>'
         + '</div><span class="badge-banned">Banned</span>'
         + '<div class="um-actions">'
-        + '<button class="btn btn-xs" style="background:#dcfce7;color:#166534;border:none" onclick="unbanUser(\'' + u.id + '\')"><i class="ti ti-check"></i> Unban</button>'
-        + '<button class="btn btn-xs" style="background:#fee2e2;color:#7f1d1d;border:none" onclick="removeUser(\'' + u.id + '\')"><i class="ti ti-trash"></i></button>'
+        + '<button class="btn btn-xs" style="background:#dcfce7;color:#166534;border:none" data-unban="' + u.id + '"><i class="ti ti-check"></i> Unban</button>'
+        + '<button class="btn btn-xs" style="background:#fee2e2;color:#7f1d1d;border:none" data-remove="' + u.id + '"><i class="ti ti-trash"></i></button>'
         + '</div></div>';
     }).join('');
   }
@@ -5409,9 +5433,16 @@ function switchUMTab(tab) {
 // ── APPROVE / REJECT / BAN / UNBAN / REMOVE ──────────────────────────────
 async function approveRequest(reqId) {
   var req = (db.registrationRequests || []).find(function(r) { return r.id === reqId; });
-  if (!req) return;
+  if (!req) { toast('Request not found', 'error'); return; }
 
-  // Generate credentials
+  // Show loading on the button
+  var card = document.getElementById('umcard-' + reqId);
+  if (card) {
+    var approveBtn = card.querySelector('[data-approve]');
+    if (approveBtn) { approveBtn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i> Approving...'; approveBtn.disabled = true; }
+  }
+
+  // Generate credentials (AI with 5s timeout, falls back to local)
   var creds = await generateAICredentials(req.name, req.sport);
   var username, password;
   if (creds && creds.username && creds.password) {
@@ -5447,23 +5478,25 @@ async function approveRequest(reqId) {
 
   await saveDB();
   updateBadges();
+  renderUserMgmt();
 
   openModal('Account Approved \u2713',
     '<div style="text-align:center;margin-bottom:16px">'
-    + '<i class="ti ti-circle-check" style="font-size:40px;color:#16a34a"></i>'
+    + '<i class="ti ti-circle-check" style="font-size:44px;color:#16a34a"></i>'
     + '<div style="font-weight:800;font-size:15px;margin-top:8px">' + req.name + '</div>'
     + '<div style="font-size:11px;color:var(--text3)">' + req.sport + '</div></div>'
-    + '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:16px;text-align:center">'
-    + '<div style="font-size:10px;color:var(--text3);margin-bottom:8px;font-weight:700;text-transform:uppercase">Auto-Generated Credentials</div>'
-    + '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">'
-    + '<div style="background:white;border-radius:8px;padding:10px 18px;border:1px solid #86efac"><div style="font-size:9px;color:var(--text3)">USERNAME</div><div style="font-size:18px;font-weight:900;font-family:monospace;color:var(--navy)">' + username + '</div></div>'
-    + '<div style="background:white;border-radius:8px;padding:10px 18px;border:1px solid #86efac"><div style="font-size:9px;color:var(--text3)">PASSWORD</div><div style="font-size:18px;font-weight:900;font-family:monospace;color:var(--navy)">' + password + '</div></div>'
+    + '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:18px;text-align:center">'
+    + '<div style="font-size:10px;color:#166534;margin-bottom:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em">&#x2728; Auto-Generated Login Credentials</div>'
+    + '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:12px">'
+    + '<div style="background:white;border-radius:10px;padding:12px 20px;border:1px solid #86efac;min-width:120px"><div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">USERNAME</div><div style="font-size:18px;font-weight:900;font-family:monospace;color:#0a1628">' + username + '</div></div>'
+    + '<div style="background:white;border-radius:10px;padding:12px 20px;border:1px solid #86efac;min-width:120px"><div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">PASSWORD</div><div style="font-size:18px;font-weight:900;font-family:monospace;color:#0a1628">' + password + '</div></div>'
     + '</div>'
-    + '<div style="font-size:10px;color:#854d0e;margin-top:10px;background:#fef9c3;border-radius:6px;padding:7px"><i class="ti ti-alert-triangle"></i> Share these with the resident. They can also get them via the My Ticket tab.</div>'
+    + '<div style="font-size:10px;color:#92400e;background:#fef9c3;border-radius:8px;padding:8px"><i class="ti ti-info-circle"></i> Share these credentials with <b>' + req.name + '</b>. They can also retrieve them via the <b>My Ticket</b> tab on the login page.</div>'
     + '</div>',
-    '<button class="btn btn-primary btn-sm" onclick="closeModal();renderUserMgmt()"><i class="ti ti-check"></i> Done</button>'
+    '<button class="btn btn-primary btn-sm" onclick="closeModal()"><i class="ti ti-check"></i> Done</button>'
   );
 }
+
 
 function rejectRequest(reqId) {
   if (!confirm('Reject this registration request?')) return;
