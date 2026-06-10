@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- SAI Hostel Portal v2.0 | Production Build | 2026-06-09 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -274,6 +273,10 @@ tbody tr:hover td{background:#fafbff}
 .login-divider{display:flex;align-items:center;gap:10px;margin:18px 0 14px}
 .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--border)}
 .login-divider span{font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
+.demo-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:16px}
+.demo-btn{padding:10px 6px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:none;color:white;text-align:center;transition:all .15s;line-height:1.5;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.demo-btn:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.demo-btn:active{transform:translateY(0)}
 .creds-box{padding:11px 13px;background:#f8faff;border-radius:10px;border:1px solid var(--border)}
 .creds-box-title{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;display:flex;align-items:center;gap:5px}
 .creds-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:10px;color:var(--text2)}
@@ -530,14 +533,14 @@ a, button, [onclick] { -webkit-tap-highlight-color: transparent; }
       <!-- Username -->
       <div class="form-field-login">
         <label class="label">Username</label>
-        <input class="input" id="lu" placeholder="Enter username" autocomplete="username"/>
+        <input class="input" id="lu" value="admin" placeholder="Enter username" autocomplete="username"/>
       </div>
 
       <!-- Password with show/hide toggle -->
       <div class="form-field-login">
         <label class="label">Password</label>
         <div class="pw-wrap">
-          <input class="input" id="lp" type="password" placeholder="Enter password" autocomplete="current-password"/>
+          <input class="input" id="lp" type="password" value="sai@admin123" placeholder="Enter password" autocomplete="current-password"/>
           <button class="pw-toggle" type="button" onclick="togglePw()" id="pwToggleBtn" title="Show/hide password">
             <i class="ti ti-eye" id="pwToggleIcon"></i>
           </button>
@@ -552,7 +555,43 @@ a, button, [onclick] { -webkit-tap-highlight-color: transparent; }
         <i class="ti ti-login"></i>&nbsp; Sign In
       </button>
 
+      <!-- Quick Demo Access -->
+      <div class="login-divider"><span>Quick Demo Access</span></div>
 
+      <div class="demo-grid">
+        <button class="demo-btn" style="background:linear-gradient(135deg,#0a1628,#1a3a6b)" onclick="ql('admin','sai@admin123')">
+          <i class="ti ti-shield-check" style="font-size:18px;display:block;margin-bottom:4px"></i>Super Admin
+        </button>
+        <button class="demo-btn" style="background:linear-gradient(135deg,#3730a3,#6d28d9)" onclick="ql('warden1','warden@123')">
+          <i class="ti ti-user-shield" style="font-size:18px;display:block;margin-bottom:4px"></i>Warden
+        </button>
+        <button class="demo-btn" style="background:linear-gradient(135deg,#15803d,#16a34a)" onclick="ql('resident1','res@123')">
+          <i class="ti ti-user" style="font-size:18px;display:block;margin-bottom:4px"></i>Resident
+        </button>
+      </div>
+
+      <!-- Credentials reference -->
+      <div class="creds-box">
+        <div class="creds-box-title"><i class="ti ti-key" style="font-size:11px"></i> Demo Credentials</div>
+        <div class="creds-row">
+          <span class="creds-role">Admin</span>
+          <span class="creds-val">admin</span>
+          <span style="color:var(--text3);font-size:9px">/</span>
+          <span class="creds-val">sai@admin123</span>
+        </div>
+        <div class="creds-row">
+          <span class="creds-role">Warden</span>
+          <span class="creds-val">warden1</span>
+          <span style="color:var(--text3);font-size:9px">/</span>
+          <span class="creds-val">warden@123</span>
+        </div>
+        <div class="creds-row">
+          <span class="creds-role">Resident</span>
+          <span class="creds-val">resident1</span>
+          <span style="color:var(--text3);font-size:9px">/</span>
+          <span class="creds-val">res@123</span>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1063,7 +1102,7 @@ function doGet(e) {
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-ghost btn-sm" onclick="loadDB().then(()=>{refreshPage();toast('Database refreshed','success')})"><i class="ti ti-refresh"></i> Refresh DB</button>
               <button class="btn btn-excel btn-sm" onclick="exportFullReport()"><i class="ti ti-download"></i> Backup to Excel</button>
-              <button class="btn btn-danger btn-sm" onclick="confirmResetDB()"><i class="ti ti-trash"></i> Reset Database</button>
+              <button class="btn btn-danger btn-sm" onclick="confirmResetDB()"><i class="ti ti-trash"></i> Reset to Demo Data</button>
             </div>
           </div>
         </div>
@@ -1071,8 +1110,8 @@ function doGet(e) {
           <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:12px">User Accounts</div>
           <table><thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Status</th></tr></thead><tbody>
             <tr><td>admin</td><td>Super Administrator</td><td><span class="badge b-blue">Super Admin</span></td><td><span class="badge b-green">Active</span></td></tr>
-            <tr><td>warden1</td><td>Warden</td><td><span class="badge b-purple">Warden</span></td><td><span class="badge b-green">Active</span></td></tr>
-            <tr><td>resident1</td><td>Resident</td><td><span class="badge b-gray">Resident</span></td><td><span class="badge b-green">Active</span></td></tr>
+            <tr><td>warden1</td><td>Mr. Suresh Pandey</td><td><span class="badge b-purple">Warden</span></td><td><span class="badge b-green">Active</span></td></tr>
+            <tr><td>resident1</td><td>Arjun Kumar</td><td><span class="badge b-gray">Resident</span></td><td><span class="badge b-green">Active</span></td></tr>
           </tbody></table>
         </div>
       </div>
@@ -1154,11 +1193,6 @@ let toastTimer = null;
 
 // ─── SEED ───────────────────────────────────────
 function seedDB() {
-  // Empty database — fresh start. Add your real data via the portal.
-  const settings = {portalName:'SAI Hostel Management Portal',email:'admin@sai.gov.in',curfew:'22:00',academicYear:'2024-25'};
-  return {hostels:[],rooms:[],beds:[],residents:[],wardens:[],complaints:[],notices:[],settings,mealLogs:[],version:7};
-}
-function seedDB_UNUSED_DEMO() {
   const FN = ['Arjun','Priya','Rahul','Ananya','Vikram','Deepa','Suresh','Meena','Rajesh','Kavya','Amit','Sunita','Rohit','Pooja','Sanjay','Nisha','Manoj','Rekha','Anil','Geeta','Sachin','Lata','Dinesh','Usha','Ramesh','Kiran','Mohan','Jyoti','Arun','Shobha'];
   const LN = ['Kumar','Sharma','Singh','Verma','Gupta','Yadav','Patel','Joshi','Mishra','Tiwari','Pandey','Srivastava','Chauhan','Nair','Iyer','Menon','Reddy','Rao','Das','Bhat'];
   const SP = ['Athletics','Swimming','Boxing','Wrestling','Weightlifting','Shooting','Archery','Badminton','Table Tennis','Hockey','Football','Volleyball','Gymnastics','Judo'];
@@ -1201,7 +1235,7 @@ function seedDB_UNUSED_DEMO() {
 
   const settings = {portalName:'SAI Hostel Management Portal',email:'admin@sai.gov.in',curfew:'22:00',academicYear:'2024-25'};
 
-  return {hostels,rooms,beds,residents,wardens,complaints,notices,settings,mealLogs:[],version:7};
+  return {hostels,rooms,beds,residents,wardens,complaints,notices,settings,mealLogs:[],version:6};
 }
 
 // ─── STORAGE POLYFILL ───────────────────────────
@@ -1213,9 +1247,7 @@ function seedDB_UNUSED_DEMO() {
 // ═══════════════════════════════════════════════════════════
 
 // ─── Storage polyfill (localStorage fallback) ────────────
-// Always use localStorage when running outside claude.ai
-const _isClaudeEnv = (typeof window.location !== 'undefined' && window.location.hostname.includes('claude.ai'));
-if (!window.storage || !_isClaudeEnv) {
+if (!window.storage) {
   window.storage = {
     get:    async (k)   => { try { const v=localStorage.getItem(k); return v?{key:k,value:v}:null; } catch(e){return null;} },
     set:    async (k,v) => { try { localStorage.setItem(k,v); return {key:k,value:v}; } catch(e){return null;} },
@@ -1227,9 +1259,9 @@ if (!window.storage || !_isClaudeEnv) {
 // ─── Key schema ──────────────────────────────────────────
 // window.storage (Claude API) = text data only, no photos
 // IndexedDB (local browser)   = Aadhaar photos (base64)
-const DB_PREFIX   = 'sai_v7_';
+const DB_PREFIX   = 'sai_v6_';
 const COLLECTIONS = ['hostels','rooms','beds','residents','wardens','complaints','notices','settings','mealLogs'];
-const DB_META_KEY = 'sai_v7_meta';
+const DB_META_KEY = 'sai_v6_meta';
 const IDB_NAME    = 'sai_photos_db';
 const IDB_STORE   = 'photos';
 
@@ -1303,7 +1335,7 @@ async function saveDB() {
     });
 
     await window.storage.set(DB_META_KEY, JSON.stringify({
-      version: 7, savedAt: new Date().toISOString(),
+      version: 6, savedAt: new Date().toISOString(),
       counts: { residents: (db.residents||[]).length, mealLogs: (db.mealLogs||[]).length }
     }));
 
@@ -1322,7 +1354,7 @@ async function loadDB() {
     const meta = await window.storage.get(DB_META_KEY);
     if (meta && meta.value) {
       const m = JSON.parse(meta.value);
-      if (m.version === 7) {
+      if (m.version === 6) {
         const results = await Promise.allSettled(
           COLLECTIONS.map(col => window.storage.get(DB_PREFIX + col))
         );
@@ -1335,7 +1367,7 @@ async function loadDB() {
             loaded[col] = col === 'settings' ? {} : [];
           }
         });
-        db = { ...loaded, version: 7 };
+        db = { ...loaded, version: 6 };
         if (!db.mealLogs) db.mealLogs = [];
         // Reattach photos from IndexedDB
         await loadAllPhotos();
@@ -1348,8 +1380,8 @@ async function loadDB() {
       const legacy = await window.storage.get(DB_KEY);
       if (legacy && legacy.value) {
         const p = JSON.parse(legacy.value);
-        if (p.version === 4 || p.version === 5 || p.version === 6) {
-          db = { ...p, version: 7 };
+        if (p.version === 4 || p.version === 5) {
+          db = { ...p, version: 6 };
           if (!db.mealLogs) db.mealLogs = [];
           await saveDB();
           setDBStatus('ok');
@@ -1392,10 +1424,10 @@ function setDBStatus(s) {
 // ─── AUTH ────────────────────────────────────────
 const USERS = {
   admin:    {id:'U001',role:'superadmin',name:'Super Administrator',avatar:'SA',short:'Admin'},
-  warden1:  {id:'U002',role:'warden',name:'Warden',avatar:'WD',short:'Warden'},
-  resident1:{id:'U003',role:'resident',name:'Resident',avatar:'RS',short:'Resident'},
+  warden1:  {id:'U002',role:'warden',name:'Mr. Suresh Pandey',avatar:'SP',short:'Warden'},
+  resident1:{id:'U003',role:'resident',name:'Arjun Kumar',avatar:'AK',short:'Arjun'},
 };
-const CREDS = {admin:'sai@2025',warden1:'warden@2025',resident1:'resident@2025'};
+const CREDS = {admin:'sai@admin123',warden1:'warden@123',resident1:'res@123'};
 
 function doLogin() {
   const u=document.getElementById('lu').value.trim(), p=document.getElementById('lp').value.trim();
@@ -1416,7 +1448,7 @@ function doLogin() {
     box.style.animation='shake .3s ease';
   }
 }
-
+function ql(u,p){document.getElementById('lu').value=u;document.getElementById('lp').value=p;document.getElementById('lerr').classList.remove('visible');doLogin();}
 function doLogout(){
   const fab=document.getElementById('ariaFab');
   if(fab)fab.style.display='none';
@@ -1449,7 +1481,7 @@ async function startApp() {
     await loadDB();
   } catch(e) {
     console.error('loadDB failed, using seed data:', e);
-    if (!db) { try { db = seedDB(); } catch(e2) { db = {hostels:[],rooms:[],beds:[],residents:[],wardens:[],complaints:[],notices:[],settings:{},mealLogs:[],version:7}; } }
+    if (!db) { try { db = seedDB(); } catch(e2) { db = {hostels:[],rooms:[],beds:[],residents:[],wardens:[],complaints:[],notices:[],settings:{},mealLogs:[],version:6}; } }
     setDBStatus('err');
   }
   buildNav();
@@ -2714,11 +2746,11 @@ async function saveSettings(){
 }
 async function confirmResetDB(){
   openModal('Reset Database',
-    `<div style="text-align:center;padding:8px"><div style="font-size:28px;color:#dc2626;margin-bottom:10px"><i class="ti ti-database-x"></i></div><div style="font-size:14px;font-weight:800;margin-bottom:6px">Reset entire database?</div><div style="font-size:11px;color:var(--text3)">All data will be permanently deleted. This cannot be undone.</div></div>`,
+    `<div style="text-align:center;padding:8px"><div style="font-size:28px;color:#dc2626;margin-bottom:10px"><i class="ti ti-database-x"></i></div><div style="font-size:14px;font-weight:800;margin-bottom:6px">Reset entire database?</div><div style="font-size:11px;color:var(--text3)">All data will be permanently replaced with demo seed data. This cannot be undone.</div></div>`,
     `<button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-danger btn-sm" onclick="doResetDB()"><i class="ti ti-trash"></i> Yes, Reset DB</button>`
   );
 }
-async function doResetDB(){db=seedDB();await saveDB();closeModal();refreshPage();updateBadges();toast('Database has been reset.');}
+async function doResetDB(){db=seedDB();await saveDB();closeModal();refreshPage();updateBadges();toast('Database reset with fresh demo data.');}
 
 // ═══════════════════════════════════════════════
 // GENERIC DELETE
