@@ -1345,6 +1345,83 @@ if (!window.storage || !_isClaudeEnv) {
   };
 }
 
+// ═══════════════════════════════════════════════════════════
+// SHARED CLOUD SYNC — Firebase Realtime Database (free tier)
+// registrationRequests + residentUsers sync across all devices
+// so resident registration is visible to warden/admin anywhere
+// ═══════════════════════════════════════════════════════════
+const FB_URL = 'https://sai-hostel-portal-default-rtdb.firebaseio.com';
+
+async function fbGet(path) {
+  try {
+    const r = await fetch(FB_URL + path + '.json', {cache:'no-store'});
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d;
+  } catch(e) { return null; }
+}
+
+async function fbSet(path, data) {
+  try {
+    const r = await fetch(FB_URL + path + '.json', {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    return r.ok;
+  } catch(e) { return false; }
+}
+
+async function fbPatch(path, data) {
+  try {
+    const r = await fetch(FB_URL + path + '.json', {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    return r.ok;
+  } catch(e) { return false; }
+}
+
+// Pull shared data from Firebase and merge into local db
+async function syncFromCloud() {
+  try {
+    const shared = await fbGet('/shared');
+    if (!shared) return false;
+    if (Array.isArray(shared.registrationRequests) && shared.registrationRequests.length > 0) {
+      const local = db.registrationRequests || [];
+      const cloudMap = {};
+      shared.registrationRequests.forEach(r => { cloudMap[r.id] = r; });
+      local.forEach(r => { if (!cloudMap[r.id]) cloudMap[r.id] = r; });
+      db.registrationRequests = Object.values(cloudMap).sort((a,b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+    }
+    if (Array.isArray(shared.residentUsers) && shared.residentUsers.length > 0) {
+      const local = db.residentUsers || [];
+      const cloudMap = {};
+      shared.residentUsers.forEach(u => { cloudMap[u.id] = u; });
+      local.forEach(u => { if (!cloudMap[u.id]) cloudMap[u.id] = u; });
+      db.residentUsers = Object.values(cloudMap);
+    }
+    return true;
+  } catch(e) { console.warn('syncFromCloud failed:', e); return false; }
+}
+
+// Push registrationRequests + residentUsers to Firebase
+async function syncToCloud() {
+  try {
+    const reqs = (db.registrationRequests || []).map(r => {
+      const copy = Object.assign({}, r);
+      delete copy.govIdData; // strip base64 images — too large for Firebase free tier
+      return copy;
+    });
+    await fbSet('/shared', {
+      registrationRequests: reqs,
+      residentUsers: db.residentUsers || [],
+      updatedAt: new Date().toISOString()
+    });
+  } catch(e) { console.warn('syncToCloud failed:', e); }
+}
+
 // ─── Key schema ──────────────────────────────────────────
 // window.storage (Claude API) = text data only, no photos
 // IndexedDB (local browser)   = Aadhaar photos (base64)
@@ -1618,6 +1695,11 @@ async function startApp() {
     window._pendingResidentSession = null;
   }
   buildNav();
+  // Pull shared registrations/users from Firebase
+  syncFromCloud().then(() => {
+    updateBadges();
+    refreshPage();
+  }).catch(()=>{});
   nav('dashboard');
   // Show ARIA fab for superadmin
   const fab=document.getElementById('ariaFab');
@@ -5024,6 +5106,7 @@ async function submitRegistration() {
   if (!db.registrationRequests) db.registrationRequests = [];
   db.registrationRequests.unshift(req);
   await saveDB();
+  await syncToCloud(); // push to Firebase so warden/admin on any device can see it
   try { updateBadges(); } catch(e) {}
 
   btn.innerHTML = '<i class="ti ti-send"></i>&nbsp; Submit Request';
@@ -5059,6 +5142,7 @@ async function lookupTicket() {
   btn.style.pointerEvents = 'none';
 
   await ensureDBLoaded();
+  await syncFromCloud(); // pull latest from Firebase so approval shows immediately
 
   btn.innerHTML = '<i class="ti ti-search"></i>&nbsp; Look Up Ticket';
   btn.style.pointerEvents = '';
@@ -5123,6 +5207,12 @@ function renderUserMgmt() {
   if (!db) return;
   if (!db.registrationRequests) db.registrationRequests = [];
   if (!db.residentUsers) db.residentUsers = [];
+  // Pull latest from Firebase first, then render
+  syncFromCloud().then(() => {
+    switchUMTab(umCurrentTab);
+    updateBadges();
+  });
+  // Also render immediately with local data while cloud loads
   switchUMTab(umCurrentTab);
   updateBadges();
 }
@@ -5249,7 +5339,8 @@ async function approveRequest(reqId) {
   req.generatedUsername = username;
   req.generatedPassword = password;
 
-  saveDB();
+  await saveDB();
+  await syncToCloud(); // push approval + new user account to Firebase
   updateBadges();
 
   // Show credentials to admin/warden
@@ -5285,6 +5376,7 @@ function rejectRequest(reqId) {
   req.reviewedBy = currentUser.name;
   req.reviewedAt = new Date().toISOString();
   saveDB();
+  syncToCloud();
   updateBadges();
   renderUserMgmt();
   toast('Request rejected.');
@@ -5296,6 +5388,7 @@ function banUser(userId) {
   if (!u) return;
   u.status = 'banned';
   saveDB();
+  syncToCloud();
   renderUserMgmt();
   toast('User banned.');
 }
@@ -5305,6 +5398,7 @@ function unbanUser(userId) {
   if (!u) return;
   u.status = 'active';
   saveDB();
+  syncToCloud();
   renderUserMgmt();
   toast('User unbanned.');
 }
@@ -5313,6 +5407,7 @@ function removeUser(userId) {
   if (!confirm('Permanently remove this user account? This cannot be undone.')) return;
   db.residentUsers = (db.residentUsers||[]).filter(r=>r.id!==userId);
   saveDB();
+  syncToCloud();
   renderUserMgmt();
   toast('User removed.');
 }
