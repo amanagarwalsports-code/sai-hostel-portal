@@ -5325,37 +5325,30 @@ async function importTicketCode() {
 // ── USER MANAGEMENT PAGE ──────────────────────────────────────────────────
 var umCurrentTab = 'pending';
 
+// Global handler functions called from onclick - no escaping issues
+window._um_approve = function(id) { approveRequest(id); };
+window._um_reject  = function(id) { rejectRequest(id); };
+window._um_ban     = function(id) { banUser(id); };
+window._um_unban   = function(id) { unbanUser(id); };
+window._um_remove  = function(id) { removeUser(id); };
+window._um_creds   = function(id) { showCredentials(id); };
+
+// Store pending IDs so buttons can look them up by index (no string escaping needed)
+var _umPendingIds  = [];
+var _umActiveIds   = [];
+var _umBannedIds   = [];
+
 function renderUserMgmt() {
   if (!db) return;
   if (!db.registrationRequests) db.registrationRequests = [];
   if (!db.residentUsers) db.residentUsers = [];
   switchUMTab(umCurrentTab);
   updateBadges();
-  // Event delegation - handles dynamically rendered approve/reject buttons
-  var el = document.getElementById('umContent');
-  if (el && !el._delegated) {
-    el._delegated = true;
-    el.addEventListener('click', function(e) {
-      var btn = e.target.closest('[data-approve]');
-      if (btn) { approveRequest(btn.getAttribute('data-approve')); return; }
-      var btn2 = e.target.closest('[data-reject]');
-      if (btn2) { rejectRequest(btn2.getAttribute('data-reject')); return; }
-      var btn3 = e.target.closest('[data-ban]');
-      if (btn3) { banUser(btn3.getAttribute('data-ban')); return; }
-      var btn4 = e.target.closest('[data-unban]');
-      if (btn4) { unbanUser(btn4.getAttribute('data-unban')); return; }
-      var btn5 = e.target.closest('[data-remove]');
-      if (btn5) { removeUser(btn5.getAttribute('data-remove')); return; }
-      var btn6 = e.target.closest('[data-creds]');
-      if (btn6) { showCredentials(btn6.getAttribute('data-creds')); return; }
-    });
-  }
 }
 
 function switchUMTab(tab) {
   umCurrentTab = tab;
-  var tabs2 = ['pending', 'active', 'banned'];
-  tabs2.forEach(function(t) {
+  ['pending','active','banned'].forEach(function(t) {
     var el = document.getElementById('umTab-' + t);
     if (el) el.classList.toggle('active', t === tab);
   });
@@ -5365,13 +5358,14 @@ function switchUMTab(tab) {
 
   if (tab === 'pending') {
     var reqs = (db.registrationRequests || []).filter(function(r) { return r.status === 'pending'; });
+    _umPendingIds = reqs.map(function(r) { return r.id; });
     if (reqs.length === 0) {
-      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)"><i class="ti ti-inbox" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i><p style="font-size:12px">No pending requests.<br><span style="font-size:10px">Residents share their Registration Code → paste it above to import.</span></p></div>';
+      el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)"><i class="ti ti-inbox" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i><p style="font-size:12px">No pending requests.<br><span style="font-size:10px">Residents share their Registration Code &rarr; paste it above to import.</span></p></div>';
       return;
     }
-    el.innerHTML = reqs.map(function(r) {
+    el.innerHTML = reqs.map(function(r, idx) {
       var initials = r.name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
-      return '<div class="um-card" style="flex-wrap:wrap;align-items:flex-start" id="umcard-' + r.id + '">'
+      return '<div class="um-card" style="flex-wrap:wrap;align-items:flex-start">'
         + '<div style="display:flex;align-items:center;gap:12px;width:100%">'
         + '<div class="um-av" style="background:#f59e0b">' + initials + '</div>'
         + '<div style="flex:1;min-width:0">'
@@ -5380,18 +5374,19 @@ function switchUMTab(tab) {
         + '<div class="um-meta" style="margin-top:2px">Ticket: <b style="font-family:monospace">' + r.id + '</b> &middot; ' + new Date(r.submittedAt).toLocaleDateString('en-IN') + '</div>'
         + '</div><span class="badge-pending">Pending</span></div>'
         + '<div style="display:flex;gap:6px;margin-top:10px;margin-left:auto">'
-        + '<button class="btn btn-xs" style="background:#dcfce7;color:#166534;border:none" data-approve="' + r.id + '"><i class="ti ti-check"></i> Approve</button>'
-        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#991b1b;border:none" data-reject="' + r.id + '"><i class="ti ti-x"></i> Reject</button>' : '')
+        + '<button class="btn btn-xs" id="approve-btn-' + idx + '" style="background:#dcfce7;color:#166534;border:none" onclick="_um_approve(_umPendingIds[' + idx + '])"><i class="ti ti-check"></i> Approve</button>'
+        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#991b1b;border:none" onclick="_um_reject(_umPendingIds[' + idx + '])"><i class="ti ti-x"></i> Reject</button>' : '')
         + '</div></div>';
     }).join('');
 
   } else if (tab === 'active') {
     var users = (db.residentUsers || []).filter(function(u) { return u.status === 'active'; });
+    _umActiveIds = users.map(function(u) { return u.id; });
     if (users.length === 0) {
       el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)"><i class="ti ti-users" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i><p style="font-size:12px">No active resident accounts yet.</p></div>';
       return;
     }
-    el.innerHTML = users.map(function(u) {
+    el.innerHTML = users.map(function(u, idx) {
       var initials = u.name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
       return '<div class="um-card">'
         + '<div class="um-av">' + initials + '</div>'
@@ -5401,20 +5396,21 @@ function switchUMTab(tab) {
         + '<div class="um-meta" style="margin-top:2px">Approved: ' + new Date(u.approvedAt).toLocaleDateString('en-IN') + ' by ' + u.approvedBy + '</div>'
         + '</div><span class="badge-approved">Active</span>'
         + '<div class="um-actions">'
-        + (isSA ? '<button class="btn btn-xs" style="background:#fef9c3;color:#854d0e;border:none" data-creds="' + u.id + '"><i class="ti ti-key"></i> Creds</button>' : '')
-        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#991b1b;border:none" data-ban="' + u.id + '"><i class="ti ti-ban"></i> Ban</button>' : '')
-        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#7f1d1d;border:none" data-remove="' + u.id + '"><i class="ti ti-trash"></i></button>' : '')
+        + (isSA ? '<button class="btn btn-xs" style="background:#fef9c3;color:#854d0e;border:none" onclick="_um_creds(_umActiveIds[' + idx + '])"><i class="ti ti-key"></i> Creds</button>' : '')
+        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#991b1b;border:none" onclick="_um_ban(_umActiveIds[' + idx + '])"><i class="ti ti-ban"></i> Ban</button>' : '')
+        + (isSA ? '<button class="btn btn-xs" style="background:#fee2e2;color:#7f1d1d;border:none" onclick="_um_remove(_umActiveIds[' + idx + '])"><i class="ti ti-trash"></i></button>' : '')
         + '</div></div>';
     }).join('');
 
   } else if (tab === 'banned') {
     if (!isSA) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);font-size:12px">Only Super Admin can view banned users.</div>'; return; }
     var banned = (db.residentUsers || []).filter(function(u) { return u.status === 'banned'; });
+    _umBannedIds = banned.map(function(u) { return u.id; });
     if (banned.length === 0) {
       el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3)"><i class="ti ti-ban" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i><p style="font-size:12px">No banned users.</p></div>';
       return;
     }
-    el.innerHTML = banned.map(function(u) {
+    el.innerHTML = banned.map(function(u, idx) {
       var initials = u.name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
       return '<div class="um-card" style="opacity:.8">'
         + '<div class="um-av" style="background:#991b1b">' + initials + '</div>'
@@ -5423,8 +5419,8 @@ function switchUMTab(tab) {
         + '<div class="um-meta">' + u.sport + ' &middot; <b style="font-family:monospace">' + u.username + '</b></div>'
         + '</div><span class="badge-banned">Banned</span>'
         + '<div class="um-actions">'
-        + '<button class="btn btn-xs" style="background:#dcfce7;color:#166534;border:none" data-unban="' + u.id + '"><i class="ti ti-check"></i> Unban</button>'
-        + '<button class="btn btn-xs" style="background:#fee2e2;color:#7f1d1d;border:none" data-remove="' + u.id + '"><i class="ti ti-trash"></i></button>'
+        + '<button class="btn btn-xs" style="background:#dcfce7;color:#166534;border:none" onclick="_um_unban(_umBannedIds[' + idx + '])"><i class="ti ti-check"></i> Unban</button>'
+        + '<button class="btn btn-xs" style="background:#fee2e2;color:#7f1d1d;border:none" onclick="_um_remove(_umBannedIds[' + idx + '])"><i class="ti ti-trash"></i></button>'
         + '</div></div>';
     }).join('');
   }
@@ -5435,12 +5431,13 @@ async function approveRequest(reqId) {
   var req = (db.registrationRequests || []).find(function(r) { return r.id === reqId; });
   if (!req) { toast('Request not found', 'error'); return; }
 
-  // Show loading on the button
-  var card = document.getElementById('umcard-' + reqId);
-  if (card) {
-    var approveBtn = card.querySelector('[data-approve]');
-    if (approveBtn) { approveBtn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i> Approving...'; approveBtn.disabled = true; }
-  }
+  // Disable all approve buttons while processing
+  document.querySelectorAll('[id^="approve-btn-"]').forEach(function(b) {
+    b.disabled = true;
+    b.innerHTML = '<i class="ti ti-loader-2" style="animation:spin .7s linear infinite"></i> Approving...';
+  });
+
+  toast('Generating credentials...');
 
   // Generate credentials (AI with 5s timeout, falls back to local)
   var creds = await generateAICredentials(req.name, req.sport);
